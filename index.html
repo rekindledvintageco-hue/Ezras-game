@@ -434,6 +434,7 @@ kbd {
       <span id="hud-mode"></span>
       <span id="hud-location"></span>
       <span id="hud-weapon"></span>
+      <span id="hud-wood"></span>
       <span id="hud-party"></span>
     </div>
 
@@ -447,9 +448,15 @@ kbd {
       </section>
       <section>
         <h3>World</h3>
-        <p><kbd>E</kbd> Enter home · <kbd>V</kbd> Village · <kbd>F</kbd> Fly</p>
-        <p><kbd>1</kbd>–<kbd>3</kbd> Dragons · <kbd>M</kbd> Mount · <kbd>P</kbd> Mini-pet</p>
-        <p><kbd>C</kbd> Customize · <kbd>I</kbd> Weapons · <kbd>B</kbd> Shrine</p>
+        <p><kbd>E</kbd> Enter home/cabin · <kbd>V</kbd> Village · <kbd>F</kbd> Fly</p>
+        <p><kbd>T</kbd> Chop tree 🪵 · <kbd>1</kbd>–<kbd>3</kbd> Dragons · <kbd>M</kbd> Mount</p>
+        <p><kbd>C</kbd> Customize · <kbd>I</kbd> Weapons · <kbd>B</kbd> Shrine · <kbd>P</kbd> Pet</p>
+      </section>
+      <section>
+        <h3>Village</h3>
+        <p><kbd>V</kbd> Enter village mode · <kbd>B</kbd> Small Cabin (50🪵)</p>
+        <p><kbd>N</kbd> Big Cabin (100🪵) · <kbd>H</kbd> Dismantle cabin</p>
+        <p><kbd>E</kbd> Enter nearby cabin · <kbd>T</kbd> Chop trees for wood</p>
       </section>
       <section>
         <h3>Battle</h3>
@@ -537,6 +544,22 @@ kbd {
         <li>⚡ Powers, pets, and weapons in battle</li>
       </ul>
       <button id="start-btn">Start Adventure</button>
+    </div>
+
+    <div id="cabin-panel" class="overlay-panel hidden">
+      <h2 id="cabin-title">Cabin</h2>
+      <p class="panel-hint">A friendly villager greets you inside!</p>
+      <div id="cabin-trade">
+        <h3 style="color:#ffd166;margin-bottom:0.5rem;">🐉 Trade a Dragon for Wood</h3>
+        <p style="margin-bottom:0.75rem;opacity:0.85;">Give the villager a dragon — they love caring for them! You get 20 🪵 wood each trade.</p>
+        <div id="cabin-dragon-list"></div>
+      </div>
+      <div id="cabin-upstairs" class="hidden" style="margin-top:1.5rem;border-top:2px solid #ffd166;padding-top:1rem;">
+        <h3 style="color:#ffd166;margin-bottom:0.5rem;">🏠 Upstairs — Dragon Trophy Room</h3>
+        <p id="cabin-unlock-msg" style="opacity:0.85;margin-bottom:0.75rem;"></p>
+        <div id="cabin-decor-list" style="display:flex;flex-direction:column;gap:0.4rem;max-width:380px;"></div>
+      </div>
+      <button id="cabin-close" style="margin-top:1.5rem;">Leave Cabin</button>
     </div>
 
     <div id="message-toast" class="hidden"></div>
@@ -695,12 +718,18 @@ const DEFAULT_HERO = {
 
 const WILD_POOL = ["ember", "frost", "leaf", "storm", "sky", "shadow"];
 
-const BUILDINGS = {
-  hut: { id: "hut", name: "Hut", color: "#8b5a2b", h: 2, w: 2 },
-  farm: { id: "farm", name: "Farm", color: "#d4a373", h: 2, w: 3 },
-  tower: { id: "tower", name: "Tower", color: "#6c757d", h: 3, w: 2 },
-  wall: { id: "wall", name: "Wall", color: "#495057", h: 1, w: 1 },
+const CABINS = {
+  small: { id: "small", name: "Small Cabin", woodCost: 50 },
+  big:   { id: "big",   name: "Big Cabin",   woodCost: 100 },
 };
+
+const CABIN_DECOR = [
+  { id: "dragonRug",    name: "Dragon Rug",       emoji: "🐉", reqDragons: 1 },
+  { id: "fireplace",    name: "Fireplace",         emoji: "🔥", reqDragons: 2 },
+  { id: "dragonThrone", name: "Dragon Throne",     emoji: "👑", reqDragons: 3 },
+  { id: "dragonBanner", name: "Dragon Banner",     emoji: "🚩", reqDragons: 4 },
+  { id: "crystalDen",   name: "Crystal Dragon Den",emoji: "💎", reqDragons: 5 },
+];
 
 const DECOR = {
   bed: { id: "bed", name: "Bed", color: "#c9184a", w: 2, h: 1 },
@@ -741,6 +770,13 @@ const els = {
   startHeroPreview: document.getElementById("start-hero-preview"),
   weaponList: document.getElementById("weapon-list"),
   equippedWeaponLabel: document.getElementById("equipped-weapon-label"),
+  hudWood: document.getElementById("hud-wood"),
+  cabinPanel: document.getElementById("cabin-panel"),
+  cabinTitle: document.getElementById("cabin-title"),
+  cabinDragonList: document.getElementById("cabin-dragon-list"),
+  cabinUpstairs: document.getElementById("cabin-upstairs"),
+  cabinUnlockMsg: document.getElementById("cabin-unlock-msg"),
+  cabinDecorList: document.getElementById("cabin-decor-list"),
   optSkin: document.getElementById("opt-skin"),
   optHair: document.getElementById("opt-hair"),
   optShirt: document.getElementById("opt-shirt"),
@@ -770,10 +806,12 @@ const state = {
   activePet: 0,
   wild: null,
   battle: null,
-  buildTool: "hut",
   decorTool: "bed",
   hammerMode: false,
   villageGrid: [],
+  cabins: [],
+  wood: 0,
+  cabinInterior: null,
   homeDecor: [],
   miniPetBag: [],
   hero: { ...DEFAULT_HERO },
@@ -865,6 +903,8 @@ function loadSave() {
     if (data.party?.length) state.party = data.party.map(normalizeDragon);
     if (data.miniPetBag) state.miniPetBag = data.miniPetBag;
     if (data.villageGrid) state.villageGrid = data.villageGrid;
+    if (data.cabins) state.cabins = data.cabins;
+    if (typeof data.wood === "number") state.wood = data.wood;
     if (data.homeDecor) state.homeDecor = data.homeDecor;
     if (data.hero) state.hero = { ...DEFAULT_HERO, ...data.hero };
     if (data.weaponBag) state.weaponBag = data.weaponBag;
@@ -900,6 +940,8 @@ function saveGame() {
     JSON.stringify({
       party: state.party,
       villageGrid: state.villageGrid,
+      cabins: state.cabins,
+      wood: state.wood,
       homeDecor: state.homeDecor,
       miniPetBag: state.miniPetBag,
       hero: state.hero,
@@ -1493,7 +1535,7 @@ function updateHud() {
   const modeLabels = {
     overworld: "Exploring",
     home: "Home — decorate",
-    village: state.hammerMode ? "Village — break" : "Village — build",
+    village: state.hammerMode ? "Village — H=dismantle" : `Village | B=Cabin(50🪵) N=BigCabin(100🪵)`,
     battle: "Battle",
   };
   els.hudMode.textContent = `Mode: ${modeLabels[state.mode] || state.mode}`;
@@ -1504,6 +1546,9 @@ function updateHud() {
   const w = getEquippedWeapon();
   if (els.hudWeapon) {
     els.hudWeapon.textContent = w ? `Weapon: ${w.emoji} ${w.name}` : "Weapon: none";
+  }
+  if (els.hudWood) {
+    els.hudWood.textContent = `🪵 Wood: ${state.wood}`;
   }
 }
 
@@ -2063,24 +2108,6 @@ function bindCanvasClickHandler() {
     return;
   }
 
-  if (state.mode === "village") {
-    const g = getGridPos("village", sx, sy);
-    if (!g || g.gx < 0 || g.gy < 0 || g.gx >= g.cols || g.gy >= g.rows) return;
-
-    if (state.hammerMode) {
-      state.villageGrid = state.villageGrid.filter(
-        (b) => !(b.x === g.gx && b.y === g.gy)
-      );
-      showToast("Building removed!");
-      saveGame();
-      return;
-    }
-
-    const b = BUILDINGS[state.buildTool];
-    state.villageGrid.push({ type: state.buildTool, x: g.gx, y: g.gy });
-    showToast(`Built ${b.name}!`);
-    saveGame();
-  }
   });
 }
 
@@ -2160,6 +2187,141 @@ function visitWeaponShrine() {
   saveGame();
 }
 
+// ── Tree chopping ──────────────────────────────────────────────
+function nearbyTreeTile() {
+  const tx = Math.floor(state.player.x / TILE);
+  const ty = Math.floor(state.player.y / TILE);
+  for (let dy = -1; dy <= 1; dy++)
+    for (let dx = -1; dx <= 1; dx++) {
+      if (worldMap[ty + dy]?.[tx + dx] === 3) return { tx: tx + dx, ty: ty + dy };
+    }
+  return null;
+}
+
+function chopTree() {
+  const tree = nearbyTreeTile();
+  if (!tree) { showToast("No tree nearby! Walk up to a tree and press T to chop."); return; }
+  const wood = 5 + Math.floor(Math.random() * 6);
+  state.wood += wood;
+  worldMap[tree.ty][tree.tx] = 0;
+  window.GameCore?.onTreeChopped?.(tree.tx, tree.ty);
+  showToast(`Chopped a tree! +${wood} wood 🪵 (Total: ${state.wood})`);
+  updateHud();
+  saveGame();
+}
+
+// ── Cabin building & entry ─────────────────────────────────────
+function nearCabin() {
+  const tx = Math.floor(state.player.x / TILE);
+  const ty = Math.floor(state.player.y / TILE);
+  return state.cabins.find(c => Math.abs(c.tx - tx) <= 2 && Math.abs(c.ty - ty) <= 2) || null;
+}
+
+function tryBuildCabin(type) {
+  const cabin = CABINS[type];
+  if (state.wood < cabin.woodCost) {
+    showToast(`Need ${cabin.woodCost} 🪵 wood for ${cabin.name}! You have ${state.wood}. Chop trees with T!`);
+    return;
+  }
+  const tx = Math.floor(state.player.x / TILE);
+  const ty = Math.floor(state.player.y / TILE);
+  if (!inVillageZone()) { showToast("You can only build inside the village zone!"); return; }
+  const tooClose = state.cabins.some(c => Math.abs(c.tx - tx) < 5 && Math.abs(c.ty - ty) < 5);
+  if (tooClose) { showToast("Too close to another cabin — move a bit further away!"); return; }
+  state.wood -= cabin.woodCost;
+  state.cabins.push({ type, tx, ty });
+  window.GameCore?.onCabinBuilt?.();
+  showToast(`Built a ${cabin.name}! 🏠 Walk up and press E to go inside.`);
+  updateHud();
+  saveGame();
+}
+
+function dismantleCabin() {
+  const cabin = nearCabin();
+  if (!cabin) { showToast("Stand near a cabin to dismantle it (H key)."); return; }
+  const refund = Math.floor(CABINS[cabin.type].woodCost * 0.5);
+  state.cabins = state.cabins.filter(c => c !== cabin);
+  state.wood += refund;
+  window.GameCore?.onCabinBuilt?.();
+  showToast(`Cabin dismantled — got ${refund} 🪵 wood back.`);
+  updateHud();
+  saveGame();
+}
+
+function enterCabin(cabin) {
+  state.uiLock = true;
+  state.cabinInterior = cabin.type;
+  renderCabinPanel(cabin);
+  els.cabinPanel?.classList.remove("hidden");
+}
+
+function leaveCabin() {
+  state.uiLock = false;
+  state.cabinInterior = null;
+  els.cabinPanel?.classList.add("hidden");
+}
+
+function renderCabinPanel(cabin) {
+  if (!els.cabinTitle) return;
+  els.cabinTitle.textContent = cabin.type === "big" ? "🏠 Big Cabin" : "🏡 Small Cabin";
+
+  // Dragon trading list
+  const list = els.cabinDragonList;
+  list.innerHTML = "";
+  if (state.party.length <= 1) {
+    list.innerHTML = "<p style='opacity:0.7'>You only have 1 dragon — can't trade your last friend! Catch more dragons first.</p>";
+  } else {
+    state.party.forEach((dragon, i) => {
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;align-items:center;gap:0.75rem;padding:0.5rem;background:rgba(0,0,0,0.3);border-radius:8px;margin-bottom:0.4rem;";
+      row.innerHTML = `<span style="flex:1">🐉 <strong>${dragon.name}</strong> Lv.${dragon.level}${dragon.miniPet ? " " + dragon.miniPet.emoji : ""}</span>`;
+      const btn = document.createElement("button");
+      btn.textContent = "Trade → 20 🪵";
+      btn.style.cssText = "padding:0.35rem 0.75rem;font-size:0.85rem;border:2px solid #ffd166;border-radius:8px;background:#3d2a5c;color:#fff;cursor:pointer;";
+      btn.addEventListener("click", () => {
+        if (state.party.length <= 1) { showToast("Can't trade your last dragon!"); return; }
+        const name = state.party[i].name;
+        state.party.splice(i, 1);
+        if (state.activePet >= state.party.length) state.activePet = 0;
+        state.wood += 20;
+        showToast(`Traded ${name} for 20 🪵 wood! Total: ${state.wood}`);
+        updateHud();
+        saveGame();
+        renderCabinPanel(cabin);
+      });
+      row.appendChild(btn);
+      list.appendChild(row);
+    });
+  }
+
+  // Upstairs (big cabin only)
+  if (cabin.type === "big") {
+    els.cabinUpstairs?.classList.remove("hidden");
+    renderUpstairs();
+  } else {
+    els.cabinUpstairs?.classList.add("hidden");
+  }
+}
+
+function renderUpstairs() {
+  if (!els.cabinDecorList) return;
+  els.cabinDecorList.innerHTML = "";
+  const dragonCount = state.party.length;
+  CABIN_DECOR.forEach(item => {
+    const unlocked = dragonCount >= item.reqDragons;
+    const div = document.createElement("div");
+    div.style.cssText = `padding:0.45rem 0.75rem;border-radius:8px;background:rgba(0,0,0,0.3);opacity:${unlocked ? "1" : "0.4"};border:2px solid ${unlocked ? "#ffd166" : "transparent"};`;
+    div.innerHTML = `${item.emoji} <strong>${item.name}</strong> — ${unlocked ? "✅ Unlocked!" : `Need ${item.reqDragons} dragons (you have ${dragonCount})`}`;
+    els.cabinDecorList.appendChild(div);
+  });
+  const next = CABIN_DECOR.find(d => dragonCount < d.reqDragons);
+  if (els.cabinUnlockMsg) {
+    els.cabinUnlockMsg.textContent = next
+      ? `You have ${dragonCount} dragon${dragonCount !== 1 ? "s" : ""}! Catch ${next.reqDragons - dragonCount} more to unlock ${next.name}.`
+      : `🎉 All ${CABIN_DECOR.length} decorations unlocked! Dragon master!`;
+  }
+}
+
 function handleInput() {
   if (state.mode === "battle" || state.uiLock) return;
 
@@ -2185,13 +2347,12 @@ function handleInput() {
   const nx = state.player.x + dx * speed;
   const ny = state.player.y + dy * speed;
 
-  if (state.mode === "overworld") {
+  if (state.mode === "overworld" || state.mode === "village") {
     const t1 = tileAt(nx, state.player.y);
     const t2 = tileAt(state.player.x, ny);
-    const t3 = tileAt(nx, ny);
     if (!isBlocked(t1, state.flying)) state.player.x = nx;
     if (!isBlocked(t2, state.flying)) state.player.y = ny;
-    if (dx || dy) tryEncounter();
+    if ((dx || dy) && state.mode === "overworld") tryEncounter();
   } else if (state.mode === "home") {
     const maxX = HOME_W * TILE - state.player.w;
     const maxY = HOME_H * TILE - state.player.h;
@@ -2199,34 +2360,49 @@ function handleInput() {
     state.player.y = Math.max(TILE, Math.min(maxY, ny));
   }
 
-  if (keysJust.has("e") && state.mode === "overworld" && nearHouse()) {
-    state.mode = "home";
-    state.player.x = 3 * TILE;
-    state.player.y = 5 * TILE;
-    showToast("Welcome home! Press 1–5 for decor, click to place. E to leave.");
-  }
-  if (keysJust.has("e") && state.mode === "home") {
-    state.mode = "overworld";
-    const exit = tileToSpawnPixels(11, 23);
-    state.player.x = exit.x;
-    state.player.y = exit.y;
-    resolvePlayerPosition();
-    showToast("Back to the wild!");
-  }
-
-  if (keysJust.has("v") && state.mode === "overworld") {
-    if (inVillageZone()) {
-      state.mode = "village";
-      showToast("Village mode! 1–4 buildings, H hammer, click. V to exit.");
-    } else showToast("Walk to the village clearing on the far east!");
-  } else if (keysJust.has("v") && state.mode === "village") {
-    state.mode = "overworld";
-    showToast("Left village builder.");
+  if (keysJust.has("e")) {
+    if (state.mode === "overworld" && nearHouse()) {
+      state.mode = "home";
+      state.player.x = 3 * TILE;
+      state.player.y = 5 * TILE;
+      showToast("Welcome home! Press 1–5 for decor, click to place. E to leave.");
+    } else if (state.mode === "overworld") {
+      const cabin = nearCabin();
+      if (cabin) enterCabin(cabin);
+    } else if (state.mode === "home") {
+      state.mode = "overworld";
+      const exit = tileToSpawnPixels(11, 23);
+      state.player.x = exit.x;
+      state.player.y = exit.y;
+      resolvePlayerPosition();
+      showToast("Back to the wild!");
+    } else if (state.mode === "village") {
+      const cabin = nearCabin();
+      if (cabin) enterCabin(cabin);
+      else showToast("Walk up to a cabin and press E to enter it.");
+    }
   }
 
-  if (keysJust.has("h") && state.mode === "village") {
-    state.hammerMode = !state.hammerMode;
-    showToast(state.hammerMode ? "Hammer: click to break!" : "Build mode.");
+  if (keysJust.has("v")) {
+    if (state.mode === "overworld") {
+      if (inVillageZone()) {
+        state.mode = "village";
+        showToast(`Village! 🪵 Wood: ${state.wood} | B=Small Cabin(50) | N=Big Cabin(100) | E=Enter Cabin | H=Dismantle | V=Exit`);
+      } else showToast("Walk to the village clearing on the far east! 🏘️");
+    } else if (state.mode === "village") {
+      state.mode = "overworld";
+      showToast("Left village.");
+    }
+  }
+
+  if (keysJust.has("t") && (state.mode === "overworld" || state.mode === "village")) {
+    chopTree();
+  }
+
+  if (state.mode === "village") {
+    if (keysJust.has("b")) tryBuildCabin("small");
+    if (keysJust.has("n")) tryBuildCabin("big");
+    if (keysJust.has("h")) dismantleCabin();
   }
 
   if (keysJust.has("m") && state.mode === "overworld") {
@@ -2276,13 +2452,6 @@ function handleInput() {
     }
   }
 
-  if (state.mode === "village") {
-    const buildKeys = ["1", "2", "3", "4"];
-    buildKeys.forEach((k, i) => {
-      if (keysJust.has(k)) state.buildTool = Object.keys(BUILDINGS)[i];
-    });
-  }
-
   if (state.mode === "home") {
     const decorKeys = ["1", "2", "3", "4", "5"];
     decorKeys.forEach((k, i) => {
@@ -2320,6 +2489,7 @@ window.addEventListener("keyup", (e) => {
 document.getElementById("start-customize-btn")?.addEventListener("click", openCustomizePanel);
 document.getElementById("customize-done")?.addEventListener("click", closeCustomizePanel);
 document.getElementById("inventory-done")?.addEventListener("click", closeInventory);
+document.getElementById("cabin-close")?.addEventListener("click", leaveCabin);
 
 function startGameSession() {
   loadSave();
@@ -2382,6 +2552,11 @@ window.GameCore = {
   onBattleStart: null,
   onBattleEnd: null,
   onHeroChanged: null,
+  onTreeChopped: null,
+  onCabinBuilt: null,
+  CABINS,
+  chopTree,
+  nearCabin,
 };
 
 syncCustomizeFormFromHero();
@@ -2415,9 +2590,10 @@ resolvePlayerPosition();
 
   let scene, camera, renderer, clock;
   let toonGradient;
-  let worldGroup, playerGroup, wildGroup, battleGroup, homeGroup;
+  let worldGroup, playerGroup, wildGroup, battleGroup, homeGroup, cabinGroup;
   let playerMesh, mountDragonMesh;
   let wildMeshes = new Map();
+  let treeMeshes = new Map();
   let battleMeshes = { player: null, wild: null };
   let cameraYaw = 0;
   let container;
@@ -2495,6 +2671,7 @@ resolvePlayerPosition();
           tree.add(leaves);
           tree.position.set(wx + UNIT / 2, 0, wz + UNIT / 2);
           worldGroup.add(tree);
+          treeMeshes.set(`${tx},${ty}`, tree);
         }
 
         if (t === 4) {
@@ -2566,6 +2743,117 @@ resolvePlayerPosition();
     }
 
     addClouds();
+  }
+
+  function buildSmallCabinMesh() {
+    const g = new THREE.Group();
+    const walls = new THREE.Mesh(
+      new THREE.BoxGeometry(UNIT * 2.8, UNIT * 1.4, UNIT * 2.8),
+      toonMat(0x7a4a2a)
+    );
+    walls.position.y = UNIT * 0.75;
+    g.add(walls);
+    for (let i = 0; i < 4; i++) {
+      const logLine = new THREE.Mesh(
+        new THREE.BoxGeometry(UNIT * 2.9, UNIT * 0.1, UNIT * 0.07),
+        toonMat(0x5c3317)
+      );
+      logLine.position.set(0, UNIT * (0.25 + i * 0.31), UNIT * 1.42);
+      g.add(logLine);
+    }
+    const roof = new THREE.Mesh(
+      new THREE.ConeGeometry(UNIT * 2.1, UNIT * 1.0, 4),
+      toonMat(0x3d1f0d)
+    );
+    roof.position.y = UNIT * 1.85;
+    roof.rotation.y = Math.PI / 4;
+    g.add(roof);
+    const door = new THREE.Mesh(
+      new THREE.BoxGeometry(UNIT * 0.45, UNIT * 0.8, UNIT * 0.09),
+      toonMat(0x2c1108)
+    );
+    door.position.set(0, UNIT * 0.5, UNIT * 1.45);
+    g.add(door);
+    [-UNIT * 0.75, UNIT * 0.75].forEach(xp => {
+      const win = new THREE.Mesh(
+        new THREE.BoxGeometry(UNIT * 0.35, UNIT * 0.35, UNIT * 0.09),
+        toonMat(0x87ceeb, 0x2244aa)
+      );
+      win.position.set(xp, UNIT * 0.95, UNIT * 1.45);
+      g.add(win);
+    });
+    return g;
+  }
+
+  function buildBigCabinMesh() {
+    const g = new THREE.Group();
+    const walls = new THREE.Mesh(
+      new THREE.BoxGeometry(UNIT * 4.2, UNIT * 1.6, UNIT * 3.8),
+      toonMat(0x7a4a2a)
+    );
+    walls.position.y = UNIT * 0.9;
+    g.add(walls);
+    const floor2 = new THREE.Mesh(
+      new THREE.BoxGeometry(UNIT * 3.8, UNIT * 1.3, UNIT * 3.4),
+      toonMat(0x6b3a1f)
+    );
+    floor2.position.y = UNIT * 2.25;
+    g.add(floor2);
+    for (let i = 0; i < 5; i++) {
+      const logLine = new THREE.Mesh(
+        new THREE.BoxGeometry(UNIT * 4.3, UNIT * 0.1, UNIT * 0.07),
+        toonMat(0x5c3317)
+      );
+      logLine.position.set(0, UNIT * (0.2 + i * 0.29), UNIT * 1.95);
+      g.add(logLine);
+    }
+    const roof = new THREE.Mesh(
+      new THREE.ConeGeometry(UNIT * 2.8, UNIT * 1.4, 4),
+      toonMat(0x3d1f0d)
+    );
+    roof.position.y = UNIT * 3.25;
+    roof.rotation.y = Math.PI / 4;
+    g.add(roof);
+    const door = new THREE.Mesh(
+      new THREE.BoxGeometry(UNIT * 0.55, UNIT * 1.0, UNIT * 0.09),
+      toonMat(0x2c1108)
+    );
+    door.position.set(0, UNIT * 0.6, UNIT * 1.96);
+    g.add(door);
+    [-UNIT * 1.1, UNIT * 1.1].forEach(xp => {
+      const win = new THREE.Mesh(
+        new THREE.BoxGeometry(UNIT * 0.42, UNIT * 0.42, UNIT * 0.09),
+        toonMat(0x87ceeb, 0x2244aa)
+      );
+      win.position.set(xp, UNIT * 1.1, UNIT * 1.96);
+      g.add(win);
+    });
+    [-UNIT * 0.85, 0, UNIT * 0.85].forEach(xp => {
+      const win = new THREE.Mesh(
+        new THREE.BoxGeometry(UNIT * 0.38, UNIT * 0.38, UNIT * 0.09),
+        toonMat(0x87ceeb, 0x2244aa)
+      );
+      win.position.set(xp, UNIT * 2.3, UNIT * 1.84);
+      g.add(win);
+    });
+    const sign = new THREE.Mesh(
+      new THREE.BoxGeometry(UNIT * 1.0, UNIT * 0.22, UNIT * 0.09),
+      toonMat(0xffd700, 0x664400)
+    );
+    sign.position.set(0, UNIT * 1.55, UNIT * 1.96);
+    g.add(sign);
+    return g;
+  }
+
+  function syncVillageCabins() {
+    cabinGroup.clear();
+    GC().state.cabins.forEach(cabin => {
+      const wx = cabin.tx * UNIT;
+      const wz = cabin.ty * UNIT;
+      const mesh = cabin.type === "big" ? buildBigCabinMesh() : buildSmallCabinMesh();
+      mesh.position.set(wx + UNIT * 1.4, 0, wz + UNIT * 1.4);
+      cabinGroup.add(mesh);
+    });
   }
 
   function addClouds() {
@@ -2868,13 +3156,14 @@ resolvePlayerPosition();
 
   function updateSceneMode() {
     const mode = GC().state.mode;
-    worldGroup.visible = mode === "overworld";
+    worldGroup.visible = mode === "overworld" || mode === "village";
     wildGroup.visible = mode === "overworld";
-    playerGroup.visible = mode === "overworld" || mode === "home";
+    playerGroup.visible = mode === "overworld" || mode === "home" || mode === "village";
     homeGroup.visible = mode === "home";
     battleGroup.visible = mode === "battle";
+    cabinGroup.visible = mode === "overworld" || mode === "village";
 
-    if (mode === "home") {
+    if (mode === "home" || mode === "village") {
       syncPlayerPosition();
     }
   }
@@ -2911,6 +3200,7 @@ resolvePlayerPosition();
     playerGroup = new THREE.Group();
     battleGroup = new THREE.Group();
     homeGroup = new THREE.Group();
+    cabinGroup = new THREE.Group();
     battleGroup.visible = false;
     homeGroup.visible = false;
 
@@ -2919,10 +3209,12 @@ resolvePlayerPosition();
     scene.add(playerGroup);
     scene.add(battleGroup);
     scene.add(homeGroup);
+    scene.add(cabinGroup);
 
     buildWorld();
     buildBattleArena();
     buildHomeScene();
+    syncVillageCabins();
     playerMesh = buildHeroMesh();
     playerGroup.add(playerMesh);
 
@@ -2939,6 +3231,12 @@ resolvePlayerPosition();
     GCref.onBattleStart = showBattleScene;
     GCref.onBattleEnd = hideBattleScene;
     GCref.onHeroChanged = updateHeroColors;
+    GCref.onTreeChopped = (tx, ty) => {
+      const key = `${tx},${ty}`;
+      const mesh = treeMeshes.get(key);
+      if (mesh) { worldGroup.remove(mesh); treeMeshes.delete(key); }
+    };
+    GCref.onCabinBuilt = () => syncVillageCabins();
 
     animate();
   }
@@ -2969,6 +3267,9 @@ resolvePlayerPosition();
       syncPlayerPosition();
       syncWildDragons();
       updateSceneMode();
+      if (GC().state.mode === "village" || GC().state.mode === "overworld") {
+        cabinGroup.visible = true;
+      }
 
       worldGroup.children.forEach((c) => {
         if (c.userData.drift) c.position.x += c.userData.drift * dt * 10;
