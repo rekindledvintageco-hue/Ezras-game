@@ -1,425 +1,2999 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Ezra's Coin Quest</title>
-<style>
-  html, body {
-    margin: 0;
-    height: 100%;
-    background: #1d1f2b;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: "Trebuchet MS", Verdana, sans-serif;
-    color: #fff;
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dragon Tamer — Ezra's Adventure</title>
+  <style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: linear-gradient(160deg, #1a0f2e 0%, #2d1b4e 40%, #0d2137 100%);
+  color: #f5e6ff;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+}
+
+#app {
+  max-width: 980px;
+  width: 100%;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 0.75rem;
+}
+
+header h1 {
+  font-size: 2rem;
+  text-shadow: 0 2px 8px rgba(255, 120, 50, 0.5);
+}
+
+.tagline {
+  opacity: 0.85;
+  font-size: 0.95rem;
+}
+
+#hud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+}
+
+#hud.hidden {
+  display: none;
+}
+
+#game-view {
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  aspect-ratio: 16 / 9;
+  border: 4px solid #ff9f43;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  background: #87ceeb;
+}
+
+#game-view canvas,
+#game {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  outline: none;
+  cursor: crosshair;
+}
+
+#controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+  font-size: 0.8rem;
+}
+
+#controls h3 {
+  color: #ff9f43;
+  margin-bottom: 0.25rem;
+}
+
+kbd {
+  background: #3d2a5c;
+  border: 1px solid #ff9f43;
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+  font-size: 0.85em;
+}
+
+#start-screen {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 8, 30, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  z-index: 100;
+  text-align: center;
+}
+
+#start-screen.hidden {
+  display: none;
+}
+
+#start-screen h2 {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+  color: #ffb347;
+}
+
+#start-screen ul {
+  text-align: left;
+  max-width: 420px;
+  margin: 1rem 0 1.5rem;
+  line-height: 1.7;
+}
+
+#start-btn {
+  font-size: 1.2rem;
+  padding: 0.75rem 2rem;
+  background: linear-gradient(180deg, #ff6b35, #c44d12);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+  box-shadow: 0 4px 0 #8b3010;
+}
+
+#start-btn:hover {
+  filter: brightness(1.1);
+}
+
+#start-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #8b3010;
+}
+
+#battle-ui {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+#battle-ui.hidden {
+  display: none;
+}
+
+.battle-panel {
+  background: linear-gradient(180deg, #2a1f4e, #1a1235);
+  border: 4px solid #ffd166;
+  border-radius: 16px;
+  padding: 1.5rem;
+  max-width: 560px;
+  width: 95%;
+}
+
+.battle-extra {
+  font-size: 0.85rem;
+  color: #c9b8e8;
+  margin-bottom: 0.5rem;
+  min-height: 1.2em;
+}
+
+.battle-panel h2 {
+  text-align: center;
+  margin-bottom: 1rem;
+  color: #ffd166;
+}
+
+.battle-sprites {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.sprite-box {
+  flex: 1;
+  text-align: center;
+}
+
+.sprite-box canvas {
+  image-rendering: pixelated;
+}
+
+.hp-bar {
+  height: 12px;
+  background: #333;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 0.35rem;
+}
+
+.hp-bar > div {
+  height: 100%;
+  background: linear-gradient(90deg, #06d6a0, #118ab2);
+  width: 100%;
+  transition: width 0.3s ease;
+}
+
+.wild-side .hp-bar > div {
+  background: linear-gradient(90deg, #ef476f, #ff6b6b);
+}
+
+#battle-log {
+  min-height: 2.5em;
+  margin: 0.75rem 0;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+.battle-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.battle-buttons button {
+  flex: 1;
+  min-width: 88px;
+  padding: 0.65rem;
+  font-size: 1rem;
+  border: 2px solid #ffd166;
+  border-radius: 10px;
+  background: #3d2a5c;
+  color: #fff;
+  cursor: pointer;
+}
+
+.battle-buttons button:hover {
+  background: #5a3d8a;
+}
+
+.battle-buttons button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#message-toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1235;
+  border: 2px solid #ff9f43;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  z-index: 200;
+  animation: toast-in 0.3s ease;
+}
+
+#message-toast.hidden {
+  display: none;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
   }
-  #wrap {
-    text-align: center;
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
   }
-  canvas {
-    background: #87ceeb;
-    border: 6px solid #2b2d3c;
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    max-width: 95vw;
-    height: auto;
-  }
-  #hint {
-    margin-top: 10px;
-    font-size: 14px;
-    opacity: 0.7;
-  }
-</style>
+}
+
+.overlay-panel {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 8, 30, 0.94);
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.overlay-panel.hidden {
+  display: none;
+}
+
+.overlay-panel h2 {
+  color: #ffb347;
+  margin-bottom: 1rem;
+}
+
+.customize-layout {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.customize-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  text-align: left;
+}
+
+.customize-options label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  min-width: 220px;
+}
+
+.customize-options input[type="color"] {
+  width: 48px;
+  height: 32px;
+  border: none;
+  cursor: pointer;
+}
+
+.customize-options select {
+  padding: 0.25rem;
+}
+
+#hero-preview,
+#start-hero-preview {
+  background: #2d1b4e;
+  border: 3px solid #ff9f43;
+  border-radius: 12px;
+  image-rendering: pixelated;
+}
+
+.overlay-panel button,
+#start-customize-btn {
+  padding: 0.6rem 1.5rem;
+  font-size: 1rem;
+  border: 2px solid #ffd166;
+  border-radius: 10px;
+  background: #3d2a5c;
+  color: #fff;
+  cursor: pointer;
+}
+
+.overlay-panel button:hover,
+#start-customize-btn:hover {
+  background: #5a3d8a;
+}
+
+.start-customize {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin: 1rem 0;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 12px;
+}
+
+.starter-gift {
+  margin-top: 0.5rem;
+  color: #ffd166;
+  font-size: 0.95rem;
+}
+
+.panel-hint {
+  opacity: 0.85;
+  margin-bottom: 0.75rem;
+  max-width: 400px;
+  text-align: center;
+}
+
+#weapon-list {
+  list-style: none;
+  max-width: 420px;
+  width: 100%;
+  margin: 1rem 0;
+}
+
+#weapon-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem;
+  margin-bottom: 0.4rem;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 8px;
+  border: 2px solid transparent;
+}
+
+#weapon-list li.equipped {
+  border-color: #ffd166;
+}
+
+#weapon-list li button {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+#equipped-weapon-label {
+  color: #06d6a0;
+  font-weight: bold;
+}
+  </style>
 </head>
 <body>
-<div id="wrap">
-  <canvas id="game" width="900" height="500"></canvas>
-  <div id="hint">Move: &larr; &rarr; (or A / D) &nbsp;&bull;&nbsp; Jump: Space or &uarr; &nbsp;&bull;&nbsp; Restart: R</div>
-</div>
+  <div id="app">
+    <header>
+      <h1>🐉 Dragon Tamer</h1>
+      <p class="tagline">3D anime adventure — tame dragons, explore &amp; battle!</p>
+    </header>
 
-<script>
-/* =======================================================================
-   EZRA'S COIN QUEST
-   A 2D game. Collect all the coins and avoid the grumpy blobs!
+    <div id="hud" class="hidden">
+      <span id="hud-mode"></span>
+      <span id="hud-location"></span>
+      <span id="hud-weapon"></span>
+      <span id="hud-party"></span>
+    </div>
 
-   >>> WANT TO CHANGE THE GAME? Edit the numbers in SETTINGS below. <<<
-   Try making the player jump higher, run faster, or change the colors.
-   ======================================================================= */
+    <div id="game-view"></div>
 
-const SETTINGS = {
-  playerName:    "Ezra",     // your name shows up in the game!
-  playerColor:   "#ff5a5f",  // the color of the player
-  jumpStrength:  15,         // bigger number = higher jumps
-  moveSpeed:     5,          // bigger number = faster running
-  gravity:       0.6,        // bigger number = falls down faster
-  startingLives: 3,          // how many tries you get
+    <div id="controls">
+      <section>
+        <h3>Move</h3>
+        <p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows</p>
+        <p><kbd>[</kbd> <kbd>]</kbd> Rotate camera</p>
+      </section>
+      <section>
+        <h3>World</h3>
+        <p><kbd>E</kbd> Enter home · <kbd>V</kbd> Village · <kbd>F</kbd> Fly</p>
+        <p><kbd>1</kbd>–<kbd>3</kbd> Dragons · <kbd>M</kbd> Mount · <kbd>P</kbd> Mini-pet</p>
+        <p><kbd>C</kbd> Customize · <kbd>I</kbd> Weapons · <kbd>B</kbd> Shrine</p>
+      </section>
+      <section>
+        <h3>Battle</h3>
+        <p>Walk up to wild dragons · <strong>Power</strong> / <strong>Pet</strong> / <strong>Weapon</strong></p>
+      </section>
+    </div>
+
+    <div id="battle-ui" class="hidden">
+      <div class="battle-panel">
+        <h2>Wild <span id="wild-name"></span> appeared!</h2>
+        <div class="battle-sprites">
+          <div class="sprite-box player-side">
+            <canvas id="player-dragon-sprite" width="120" height="120"></canvas>
+            <p id="player-dragon-name"></p>
+            <div class="hp-bar"><div id="player-hp-fill"></div></div>
+          </div>
+          <div class="sprite-box wild-side">
+            <canvas id="wild-dragon-sprite" width="120" height="120"></canvas>
+            <p id="wild-dragon-label"></p>
+            <div class="hp-bar"><div id="wild-hp-fill"></div></div>
+          </div>
+        </div>
+        <p id="battle-log">What will you do?</p>
+        <p id="battle-power-info" class="battle-extra"></p>
+        <div class="battle-buttons">
+          <button data-action="attack">⚔️ Attack</button>
+          <button data-action="power" id="btn-power">⚡ Power</button>
+          <button data-action="pethelp" id="btn-pethelp">🐾 Pet Help</button>
+          <button data-action="weapon" id="btn-weapon">🗡️ Weapon</button>
+          <button data-action="tame">🪢 Tame</button>
+          <button data-action="run">🏃 Run</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="customize-panel" class="overlay-panel hidden">
+      <h2>Customize your tamer</h2>
+      <div class="customize-layout">
+        <canvas id="hero-preview" width="120" height="140"></canvas>
+        <div class="customize-options">
+          <label>Skin <input type="color" id="opt-skin" value="#ffcba4" /></label>
+          <label>Hair <input type="color" id="opt-hair" value="#4a3728" /></label>
+          <label>Shirt <input type="color" id="opt-shirt" value="#4361ee" /></label>
+          <label>Pants <input type="color" id="opt-pants" value="#2d6a4f" /></label>
+          <label>Hair style
+            <select id="opt-hairstyle">
+              <option value="short">Short</option>
+              <option value="spiky">Spiky</option>
+              <option value="long">Long</option>
+            </select>
+          </label>
+          <label>Hat
+            <select id="opt-hat">
+              <option value="none">None</option>
+              <option value="cap">Cap</option>
+              <option value="crown">Crown</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <button id="customize-done" type="button">Done</button>
+    </div>
+
+    <div id="inventory-panel" class="overlay-panel hidden">
+      <h2>Weapons &amp; gear</h2>
+      <p class="panel-hint">Weapons boost your dragon in battle. Use <strong>Weapon</strong> in fights!</p>
+      <p id="equipped-weapon-label"></p>
+      <ul id="weapon-list"></ul>
+      <button id="inventory-done" type="button">Close</button>
+    </div>
+
+    <div id="start-screen">
+      <h2>Welcome, Dragon Tamer!</h2>
+      <p>A 3D world inspired by Pokémon — cel-shaded &amp; colorful!</p>
+      <div class="start-customize">
+        <canvas id="start-hero-preview" width="100" height="120"></canvas>
+        <div>
+          <button type="button" id="start-customize-btn">🎨 Customize character</button>
+          <p class="starter-gift">🎁 Free starter weapon: <strong>Dragon Dagger</strong></p>
+        </div>
+      </div>
+      <ul>
+        <li>🐲 Walk up to <strong>wild dragons</strong> roaming the world!</li>
+        <li>🏠 Press <kbd>E</kbd> at your house · <kbd>V</kbd> village · <kbd>F</kbd> fly</li>
+        <li>⚡ Powers, pets, and weapons in battle</li>
+      </ul>
+      <button id="start-btn">Start Adventure</button>
+    </div>
+
+    <div id="message-toast" class="hidden"></div>
+  </div>
+
+  <!-- Three.js — kept as CDN (too large to inline) -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
+  <script>
+/* ============================================================
+   GAME CORE — shared logic (map, battle, save, hero)
+   ============================================================ */
+/**
+ * Dragon Tamer — shared game logic (map, battle, save)
+ */
+
+const TILE = 32;
+const MAP_W = 80;
+const MAP_H = 45;
+const SPAWN_TILE = { tx: 14, ty: 22 };
+const HOME_W = 14;
+const HOME_H = 10;
+const VILLAGE_W = 16;
+const VILLAGE_H = 12;
+
+const DRAGONS = {
+  ember: { id: "ember", name: "Ember Drake", type: "fire", color: "#e85d04", accent: "#ffba08", hp: 35, atk: 12, canFly: false, canRide: true, powerId: "inferno" },
+  frost: { id: "frost", name: "Frost Whelp", type: "ice", color: "#48cae4", accent: "#caf0f8", hp: 40, atk: 10, canFly: false, canRide: true, powerId: "blizzard" },
+  leaf: { id: "leaf", name: "Leaf Serpent", type: "nature", color: "#2d6a4f", accent: "#95d5b2", hp: 42, atk: 9, canFly: false, canRide: true, powerId: "vineHeal" },
+  storm: { id: "storm", name: "Storm Raptor", type: "storm", color: "#7b2cbf", accent: "#e0aaff", hp: 32, atk: 14, canFly: false, canRide: true, powerId: "thunder" },
+  sky: { id: "sky", name: "Sky Wyrm", type: "sky", color: "#4cc9f0", accent: "#fff", hp: 38, atk: 11, canFly: true, canRide: true, powerId: "gale" },
+  shadow: { id: "shadow", name: "Shadow Fang", type: "dark", color: "#3d348b", accent: "#9d4edd", hp: 36, atk: 13, canFly: false, canRide: true, powerId: "nightPulse" },
 };
 
-// ---- Canvas setup ------------------------------------------------------
+const POWERS = {
+  inferno: { id: "inferno", name: "Inferno Blast", desc: "Roaring flames!", mult: 1.85, effect: "damage" },
+  blizzard: { id: "blizzard", name: "Blizzard Shard", desc: "Ice shards — may freeze!", mult: 1.55, effect: "damage", status: "freeze", statusChance: 0.28 },
+  vineHeal: { id: "vineHeal", name: "Vine Renewal", desc: "Heals your dragon.", mult: 0, effect: "heal", healRatio: 0.35 },
+  thunder: { id: "thunder", name: "Thunder Strike", desc: "Huge bolt — small recoil.", mult: 2.0, effect: "damage", recoil: 0.12 },
+  gale: { id: "gale", name: "Gale Force", desc: "Wind pierces defenses.", mult: 1.65, effect: "damage", pierce: true },
+  nightPulse: { id: "nightPulse", name: "Night Pulse", desc: "Drains life from foe.", mult: 1.6, effect: "drain", drainRatio: 0.4 },
+};
+
+const MINI_PETS = {
+  sparkMouse: { id: "sparkMouse", name: "Spark Mouse", color: "#ff6b35", emoji: "🐭", bonus: "damage", value: 8 },
+  snowBunny: { id: "snowBunny", name: "Snow Bunny", color: "#caf0f8", emoji: "🐰", bonus: "shield", value: 0.2 },
+  mossFrog: { id: "mossFrog", name: "Moss Frog", color: "#52b788", emoji: "🐸", bonus: "heal", value: 14 },
+  buzzBeetle: { id: "buzzBeetle", name: "Buzz Beetle", color: "#ffd60a", emoji: "🪲", bonus: "powerBoost", value: 1.25 },
+  cloudMoth: { id: "cloudMoth", name: "Cloud Moth", color: "#e0fbfc", emoji: "🦋", bonus: "damage", value: 10 },
+  shadeBat: { id: "shadeBat", name: "Shade Bat", color: "#9d4edd", emoji: "🦇", bonus: "lifesteal", value: 0.25 },
+};
+
+const DRAGON_PET_AFFINITY = {
+  ember: "sparkMouse",
+  frost: "snowBunny",
+  leaf: "mossFrog",
+  storm: "buzzBeetle",
+  sky: "cloudMoth",
+  shadow: "shadeBat",
+};
+
+const MINI_PET_POOL = Object.keys(MINI_PETS);
+
+const WEAPONS = {
+  dragonDagger: {
+    id: "dragonDagger",
+    name: "Dragon Dagger",
+    emoji: "🗡️",
+    desc: "+4 damage on attacks. Quick strike!",
+    atkFlat: 4,
+    atkMult: 1,
+    activeMult: 1.45,
+    activeName: "Dagger Strike",
+    tameBonus: 0.03,
+  },
+  flameSword: {
+    id: "flameSword",
+    name: "Flame Sword",
+    emoji: "🔥",
+    desc: "+6 damage. Fire Slash hurts ice dragons!",
+    atkFlat: 6,
+    atkMult: 1.08,
+    activeMult: 1.75,
+    activeName: "Fire Slash",
+    bonusVs: "ice",
+    bonusVsMult: 1.35,
+  },
+  iceSpear: {
+    id: "iceSpear",
+    name: "Ice Spear",
+    emoji: "🧊",
+    desc: "+5 damage. May freeze on weapon strike.",
+    atkFlat: 5,
+    atkMult: 1.05,
+    activeMult: 1.5,
+    activeName: "Frost Jab",
+    freezeChance: 0.22,
+  },
+  natureStaff: {
+    id: "natureStaff",
+    name: "Nature Staff",
+    emoji: "🌿",
+    desc: "Attacks heal your dragon a little.",
+    atkFlat: 3,
+    atkMult: 1,
+    activeMult: 1.2,
+    activeName: "Vine Whip",
+    healOnAttack: 6,
+  },
+  stormHammer: {
+    id: "stormHammer",
+    name: "Storm Hammer",
+    emoji: "⚡",
+    desc: "+8 damage. Powers recharge faster.",
+    atkFlat: 8,
+    atkMult: 1.1,
+    activeMult: 2.0,
+    activeName: "Thunder Smash",
+    powerCdReduce: 1,
+  },
+  skyBow: {
+    id: "skyBow",
+    name: "Sky Bow",
+    emoji: "🏹",
+    desc: "+7 damage. Extra strong with Sky dragons.",
+    atkFlat: 7,
+    atkMult: 1.12,
+    activeMult: 1.65,
+    activeName: "Wind Shot",
+    dragonTypeBoost: "sky",
+    typeBoostMult: 1.2,
+  },
+  shadowBlade: {
+    id: "shadowBlade",
+    name: "Shadow Blade",
+    emoji: "🌑",
+    desc: "+6 damage. Easier to tame dragons.",
+    atkFlat: 6,
+    atkMult: 1.05,
+    activeMult: 1.6,
+    activeName: "Shadow Cut",
+    tameBonus: 0.12,
+  },
+};
+
+const WEAPON_POOL = Object.keys(WEAPONS).filter((id) => id !== "dragonDagger");
+
+const DEFAULT_HERO = {
+  skin: "#ffcba4",
+  hair: "#4a3728",
+  shirt: "#4361ee",
+  pants: "#2d6a4f",
+  hairStyle: "short",
+  hat: "none",
+};
+
+const WILD_POOL = ["ember", "frost", "leaf", "storm", "sky", "shadow"];
+
+const BUILDINGS = {
+  hut: { id: "hut", name: "Hut", color: "#8b5a2b", h: 2, w: 2 },
+  farm: { id: "farm", name: "Farm", color: "#d4a373", h: 2, w: 3 },
+  tower: { id: "tower", name: "Tower", color: "#6c757d", h: 3, w: 2 },
+  wall: { id: "wall", name: "Wall", color: "#495057", h: 1, w: 1 },
+};
+
+const DECOR = {
+  bed: { id: "bed", name: "Bed", color: "#c9184a", w: 2, h: 1 },
+  lamp: { id: "lamp", name: "Lamp", color: "#ffd60a", w: 1, h: 1 },
+  plant: { id: "plant", name: "Plant", color: "#40916c", w: 1, h: 1 },
+  rug: { id: "rug", name: "Rug", color: "#9d4edd", w: 2, h: 2 },
+  throne: { id: "throne", name: "Throne", color: "#ffd700", w: 1, h: 2 },
+};
+
 const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-const W = canvas.width;
-const H = canvas.height;
+const ctx = canvas?.getContext("2d") || null;
 
-// ---- Game state --------------------------------------------------------
-let state = "title";   // "title", "playing", "won", "lost"
-let score = 0;
-let lives = SETTINGS.startingLives;
-let sparkles = [];     // little bursts when you grab a coin
-
-// ---- The player --------------------------------------------------------
-const START_X = 40;
-const START_Y = 380;
-const player = {
-  x: START_X, y: START_Y,
-  w: 38, h: 44,
-  vx: 0, vy: 0,
-  onGround: false,
-  face: 1,            // 1 = looking right, -1 = looking left
-  invuln: 0,          // brief safety time after getting hit
+const els = {
+  hud: document.getElementById("hud"),
+  hudMode: document.getElementById("hud-mode"),
+  hudLocation: document.getElementById("hud-location"),
+  hudParty: document.getElementById("hud-party"),
+  startScreen: document.getElementById("start-screen"),
+  startBtn: document.getElementById("start-btn"),
+  battleUi: document.getElementById("battle-ui"),
+  wildName: document.getElementById("wild-name"),
+  wildLabel: document.getElementById("wild-dragon-label"),
+  playerDragonName: document.getElementById("player-dragon-name"),
+  battleLog: document.getElementById("battle-log"),
+  playerHpFill: document.getElementById("player-hp-fill"),
+  wildHpFill: document.getElementById("wild-hp-fill"),
+  playerSprite: document.getElementById("player-dragon-sprite"),
+  wildSprite: document.getElementById("wild-dragon-sprite"),
+  toast: document.getElementById("message-toast"),
+  battlePowerInfo: document.getElementById("battle-power-info"),
+  btnPower: document.getElementById("btn-power"),
+  btnPetHelp: document.getElementById("btn-pethelp"),
+  btnWeapon: document.getElementById("btn-weapon"),
+  hudWeapon: document.getElementById("hud-weapon"),
+  customizePanel: document.getElementById("customize-panel"),
+  inventoryPanel: document.getElementById("inventory-panel"),
+  heroPreview: document.getElementById("hero-preview"),
+  startHeroPreview: document.getElementById("start-hero-preview"),
+  weaponList: document.getElementById("weapon-list"),
+  equippedWeaponLabel: document.getElementById("equipped-weapon-label"),
+  optSkin: document.getElementById("opt-skin"),
+  optHair: document.getElementById("opt-hair"),
+  optShirt: document.getElementById("opt-shirt"),
+  optPants: document.getElementById("opt-pants"),
+  optHairstyle: document.getElementById("opt-hairstyle"),
+  optHat: document.getElementById("opt-hat"),
 };
 
-// ---- The level ---------------------------------------------------------
-// Each platform is a box: { x, y, w, h }
-const platforms = [
-  { x: 0,   y: 460, w: 900, h: 40 },   // the ground
-  { x: 150, y: 360, w: 150, h: 20 },
-  { x: 390, y: 285, w: 150, h: 20 },
-  { x: 640, y: 355, w: 170, h: 20 },
-  { x: 300, y: 165, w: 130, h: 20 },
-];
-
-// Each coin is a spot to collect: { x, y, got }
-const coins = [
-  { x: 100, y: 410, got: false },
-  { x: 210, y: 320, got: false },
-  { x: 260, y: 320, got: false },
-  { x: 360, y: 120, got: false },
-  { x: 460, y: 240, got: false },
-  { x: 700, y: 310, got: false },
-  { x: 760, y: 310, got: false },
-  { x: 540, y: 410, got: false },
-  { x: 820, y: 410, got: false },
-  { x: 440, y: 410, got: false },
-];
-
-// Each enemy patrols back and forth between minX and maxX
-const enemies = [
-  { x: 600, y: 420, w: 40, h: 40, vx: 2,   minX: 480, maxX: 850 },
-  { x: 650, y: 315, w: 40, h: 40, vx: 1.6, minX: 640, maxX: 770 },
-];
-
-function resetEnemies() {
-  enemies[0].x = 600; enemies[0].vx = 2;
-  enemies[1].x = 650; enemies[1].vx = 1.6;
-}
-
-// ---- Keyboard input ----------------------------------------------------
 const keys = {};
-window.addEventListener("keydown", (e) => {
-  keys[e.key.toLowerCase()] = true;
-  if ([" ", "arrowup", "arrowleft", "arrowright"].includes(e.key.toLowerCase())) {
-    e.preventDefault();
+const keysJust = new Set();
+let toastTimer = null;
+
+const state = {
+  mode: "overworld", // overworld | home | village | battle
+  player: {
+    x: SPAWN_TILE.tx * TILE + 6,
+    y: SPAWN_TILE.ty * TILE + 4,
+    w: 20,
+    h: 24,
+    speed: 3,
+    dir: "down",
+  },
+  mounted: false,
+  flying: false,
+  flyTimer: 0,
+  party: [(() => { const d = makeDragon("ember", 5); d.miniPet = makeMiniPet("sparkMouse"); return d; })()],
+  activePet: 0,
+  wild: null,
+  battle: null,
+  buildTool: "hut",
+  decorTool: "bed",
+  hammerMode: false,
+  villageGrid: [],
+  homeDecor: [],
+  miniPetBag: [],
+  hero: { ...DEFAULT_HERO },
+  weaponBag: [],
+  equippedWeaponId: null,
+  hasStarterWeapon: false,
+  uiLock: false,
+  encounterCooldown: 0,
+  encounterDragonId: null,
+  camera: { x: 0, y: 0 },
+};
+
+function makeMiniPet(petId) {
+  const p = MINI_PETS[petId];
+  if (!p) return null;
+  return { petId: p.id, name: p.name, color: p.color, emoji: p.emoji, bonus: p.bonus, value: p.value };
+}
+
+function makeDragon(speciesId, level = 1, withAffinityPet = false) {
+  const base = DRAGONS[speciesId];
+  const dragon = {
+    speciesId,
+    name: base.name,
+    level,
+    hp: base.hp + level * 3,
+    maxHp: base.hp + level * 3,
+    atk: base.atk + level,
+    powerId: base.powerId,
+    miniPet: null,
+    ...base,
+  };
+  if (withAffinityPet && DRAGON_PET_AFFINITY[speciesId]) {
+    dragon.miniPet = makeMiniPet(DRAGON_PET_AFFINITY[speciesId]);
   }
-  if (state === "title" && (e.key === " " || e.key === "Enter")) startGame();
-  if ((state === "won" || state === "lost") && e.key.toLowerCase() === "r") startGame();
-});
-window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
-canvas.addEventListener("click", () => { if (state === "title") startGame(); });
-
-function startGame() {
-  state = "playing";
-  score = 0;
-  lives = SETTINGS.startingLives;
-  sparkles = [];
-  coins.forEach((c) => (c.got = false));
-  resetEnemies();
-  respawnPlayer();
+  return dragon;
 }
 
-function respawnPlayer() {
-  player.x = START_X;
-  player.y = START_Y;
-  player.vx = 0;
-  player.vy = 0;
-  player.invuln = 90;
+function normalizeDragon(d) {
+  const base = DRAGONS[d.speciesId] || DRAGONS.ember;
+  d.powerId = d.powerId || base.powerId;
+  d.maxHp = d.maxHp || d.hp;
+  if (d.miniPet && typeof d.miniPet === "string") d.miniPet = makeMiniPet(d.miniPet);
+  if (d.miniPet?.petId) d.miniPet = makeMiniPet(d.miniPet.petId);
+  return d;
 }
 
-// ---- Box overlap check (used for all collisions) -----------------------
-function overlap(a, b) {
-  return a.x < b.x + b.w && a.x + a.w > b.x &&
-         a.y < b.y + b.h && a.y + a.h > b.y;
+function getPower(dragon) {
+  return POWERS[dragon.powerId] || POWERS.inferno;
 }
 
-// ---- Update: the game's thinking, runs every frame ---------------------
-function update() {
-  if (state !== "playing") return;
+function randomMiniPet() {
+  const id = MINI_PET_POOL[Math.floor(Math.random() * MINI_PET_POOL.length)];
+  return makeMiniPet(id);
+}
 
-  // Move left and right
-  if (keys["arrowleft"] || keys["a"]) { player.vx = -SETTINGS.moveSpeed; player.face = -1; }
-  else if (keys["arrowright"] || keys["d"]) { player.vx = SETTINGS.moveSpeed; player.face = 1; }
-  else { player.vx = 0; }
+function getEquippedWeapon() {
+  if (!state.equippedWeaponId) return null;
+  return WEAPONS[state.equippedWeaponId] || null;
+}
 
-  // Jump (only when standing on something)
-  if ((keys[" "] || keys["arrowup"] || keys["w"]) && player.onGround) {
-    player.vy = -SETTINGS.jumpStrength;
-    player.onGround = false;
+function grantStarterWeapon() {
+  if (!state.weaponBag.includes("dragonDagger")) {
+    state.weaponBag.push("dragonDagger");
+  }
+  if (!state.equippedWeaponId) state.equippedWeaponId = "dragonDagger";
+  state.hasStarterWeapon = true;
+}
+
+function ensureStarterGear() {
+  if (!state.hasStarterWeapon || state.weaponBag.length === 0) {
+    grantStarterWeapon();
+  }
+  if (!state.equippedWeaponId && state.weaponBag.length) {
+    state.equippedWeaponId = state.weaponBag[0];
+  }
+}
+
+function addWeapon(weaponId) {
+  if (!WEAPONS[weaponId] || state.weaponBag.includes(weaponId)) return false;
+  state.weaponBag.push(weaponId);
+  return true;
+}
+
+function loadSave() {
+  try {
+    const raw = localStorage.getItem("dragonTamerSave");
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (data.party?.length) state.party = data.party.map(normalizeDragon);
+    if (data.miniPetBag) state.miniPetBag = data.miniPetBag;
+    if (data.villageGrid) state.villageGrid = data.villageGrid;
+    if (data.homeDecor) state.homeDecor = data.homeDecor;
+    if (data.hero) state.hero = { ...DEFAULT_HERO, ...data.hero };
+    if (data.weaponBag) state.weaponBag = data.weaponBag;
+    if (data.equippedWeaponId) state.equippedWeaponId = data.equippedWeaponId;
+    if (data.hasStarterWeapon) state.hasStarterWeapon = data.hasStarterWeapon;
+    if (data.player) state.player.x = data.player.x ?? state.player.x;
+    if (data.player) state.player.y = data.player.y ?? state.player.y;
+    clampPlayerToMap();
+    resolvePlayerPosition();
+    ensureStarterGear();
+  } catch (_) {}
+}
+
+function clampPlayerToMap() {
+  const min = 4 * TILE;
+  const maxX = MAP_W * TILE - state.player.w - TILE;
+  const maxY = MAP_H * TILE - state.player.h - TILE;
+  state.player.x = Math.max(min, Math.min(maxX, state.player.x));
+  state.player.y = Math.max(min, Math.min(maxY, state.player.y));
+}
+
+function clampWildDragonPosition(d) {
+  const min = 3 * TILE;
+  const maxX = MAP_W * TILE - d.w - TILE;
+  const maxY = MAP_H * TILE - d.h - TILE;
+  d.x = Math.max(min, Math.min(maxX, d.x));
+  d.y = Math.max(min, Math.min(maxY, d.y));
+}
+
+function saveGame() {
+  localStorage.setItem(
+    "dragonTamerSave",
+    JSON.stringify({
+      party: state.party,
+      villageGrid: state.villageGrid,
+      homeDecor: state.homeDecor,
+      miniPetBag: state.miniPetBag,
+      hero: state.hero,
+      weaponBag: state.weaponBag,
+      equippedWeaponId: state.equippedWeaponId,
+      hasStarterWeapon: state.hasStarterWeapon,
+      player: { x: state.player.x, y: state.player.y },
+    })
+  );
+}
+
+// Overworld map: 0 grass, 1 path, 2 water, 3 tree, 4 tall grass, 5 house, 6 village, 7 pet grove, 8 weapon shrine
+function setRect(map, x1, y1, x2, y2, tile, skipWater = true) {
+  for (let y = y1; y <= y2; y++)
+    for (let x = x1; x <= x2; x++)
+      if (map[y]?.[x] !== undefined && (!skipWater || map[y][x] !== 2)) map[y][x] = tile;
+}
+
+function carvePath(map, x1, y1, x2, y2) {
+  const dx = Math.sign(x2 - x1);
+  const dy = Math.sign(y2 - y1);
+  let x = x1;
+  let y = y1;
+  while (x !== x2 || y !== y2) {
+    if (map[y]?.[x] !== undefined && map[y][x] !== 2) {
+      map[y][x] = 1;
+      if (map[y][x + 1] !== 2 && map[y][x + 1] !== undefined) map[y][x + 1] = 1;
+      if (map[y + 1]?.[x] !== 2) map[y + 1][x] = 1;
+    }
+    if (x !== x2) x += dx;
+    if (y !== y2) y += dy;
+  }
+  if (map[y2]?.[x2] !== undefined && map[y2][x2] !== 2) map[y2][x2] = 1;
+}
+
+function generateMap() {
+  const map = [];
+  for (let y = 0; y < MAP_H; y++) {
+    const row = [];
+    for (let x = 0; x < MAP_W; x++) {
+      let t = 0;
+      if (x < 3 || x >= MAP_W - 3 || y < 2 || y >= MAP_H - 2) t = 2;
+      else if (Math.random() < 0.05) t = 3;
+      else if (Math.random() < 0.08) t = 4;
+      row.push(t);
+    }
+    map.push(row);
   }
 
-  // Gravity pulls the player down
-  player.vy += SETTINGS.gravity;
-
-  // Move sideways, then keep player inside the screen
-  player.x += player.vx;
-  if (player.x < 0) player.x = 0;
-  if (player.x + player.w > W) player.x = W - player.w;
-
-  // Move up/down, then land on platforms
-  player.y += player.vy;
-  player.onGround = false;
-  for (const p of platforms) {
-    if (overlap(player, p)) {
-      if (player.vy > 0 && player.y + player.h - player.vy <= p.y + 1) {
-        player.y = p.y - player.h;   // land on top
-        player.vy = 0;
-        player.onGround = true;
-      } else if (player.vy < 0 && player.y - player.vy >= p.y + p.h - 1) {
-        player.y = p.y + p.h;        // bonk head on bottom
-        player.vy = 0;
-      }
+  // Central lake
+  for (let y = 17; y <= 28; y++) {
+    for (let x = 34; x <= 50; x++) {
+      const dx = x - 42;
+      const dy = y - 22;
+      if (dx * dx + dy * dy < 55) map[y][x] = 2;
     }
   }
 
-  // Collect coins
-  for (const c of coins) {
-    if (!c.got) {
-      const cx = player.x + player.w / 2;
-      const cy = player.y + player.h / 2;
-      if (Math.hypot(cx - c.x, cy - c.y) < 34) {
-        c.got = true;
-        score += 10;
-        for (let i = 0; i < 12; i++) {
-          sparkles.push({
-            x: c.x, y: c.y,
-            vx: (Math.random() - 0.5) * 6,
-            vy: (Math.random() - 0.5) * 6,
-            life: 30,
-          });
+  // Smaller pond (southwest woods)
+  for (let y = 32; y <= 36; y++) {
+    for (let x = 10; x <= 16; x++) {
+      if ((x - 13) ** 2 + (y - 34) ** 2 < 12) map[y][x] = 2;
+    }
+  }
+
+  // Main roads
+  for (let x = 10; x < MAP_W - 10; x++) {
+    map[22][x] = 1;
+    map[23][x] = 1;
+  }
+  for (let y = 6; y < MAP_H - 6; y++) {
+    map[y][40] = 1;
+    map[y][41] = 1;
+  }
+  carvePath(map, 12, 22, 40, 22);
+  carvePath(map, 40, 22, 40, 8);
+  carvePath(map, 40, 22, 40, 38);
+  carvePath(map, 40, 22, 68, 22);
+
+  // Western path to house
+  for (let y = 18; y <= 26; y++) {
+    map[y][12] = 1;
+    map[y][13] = 1;
+  }
+
+  // Your house (west)
+  map[21][7] = 5;
+  map[21][8] = 5;
+  map[22][7] = 5;
+  map[22][8] = 5;
+
+  // Village clearing (far east)
+  setRect(map, 62, 15, 74, 29, 6);
+
+  // Pet grove (south)
+  setRect(map, 33, 35, 47, 40, 7);
+
+  // Weapon shrine (north, on crossroads)
+  setRect(map, 36, 5, 44, 9, 8);
+
+  // Dragon tall-grass fields (east & south — good for battles)
+  setRect(map, 52, 28, 62, 38, 4, false);
+  setRect(map, 48, 12, 58, 18, 4, false);
+  setRect(map, 18, 30, 28, 38, 4, false);
+
+  // Northern forest
+  setRect(map, 8, 4, 28, 12, 3, true);
+  for (let x = 8; x <= 28; x++) {
+    for (let y = 4; y <= 12; y++) {
+      if (map[y][x] === 3 && Math.random() < 0.35) map[y][x] = 0;
+    }
+  }
+
+  // Eastern meadow (open grass with scattered trees)
+  for (let x = 55; x <= 72; x++) {
+    for (let y = 8; y <= 14; y++) {
+      if (map[y][x] === 3 && Math.random() < 0.7) map[y][x] = 0;
+    }
+  }
+
+  // Keep paths clear over grass
+  for (let x = 10; x < MAP_W - 10; x++) {
+    if (map[22][x] === 4) map[22][x] = 1;
+    if (map[23][x] === 4) map[23][x] = 1;
+  }
+  for (let y = 6; y < MAP_H - 6; y++) {
+    if (map[y][40] === 4) map[y][40] = 1;
+    if (map[y][41] === 4) map[y][41] = 1;
+  }
+
+  // Bridge over central lake (east-west)
+  map[22][38] = 1;
+  map[22][39] = 1;
+  map[22][40] = 1;
+  map[22][41] = 1;
+  map[22][42] = 1;
+  map[22][43] = 1;
+  map[22][44] = 1;
+  map[22][45] = 1;
+  map[23][38] = 1;
+  map[23][39] = 1;
+  map[23][40] = 1;
+  map[23][41] = 1;
+  map[23][42] = 1;
+  map[23][43] = 1;
+  map[23][44] = 1;
+  map[23][45] = 1;
+
+  clearAreaAroundSpawn(map);
+
+  return map;
+}
+
+/** Safe walkable zone by house + main path so you never spawn in trees */
+function clearAreaAroundSpawn(map) {
+  for (let y = 19; y <= 26; y++) {
+    for (let x = 9; x <= 18; x++) {
+      if (map[y]?.[x] === undefined) continue;
+      if (map[y][x] === 5) continue;
+      if (map[y][x] === 2) continue;
+      map[y][x] = 1;
+    }
+  }
+  for (let y = 20; y <= 25; y++) {
+    for (let x = 10; x <= 16; x++) map[y][x] = 1;
+  }
+}
+
+function isWalkableTile(tx, ty, flying = false) {
+  if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return false;
+  return !isBlocked(worldMap[ty][tx], flying);
+}
+
+function isPlayerPositionWalkable(px, py, flying = false) {
+  const points = [
+    [px + 2, py + 4],
+    [px + state.player.w - 2, py + 4],
+    [px + 2, py + state.player.h - 2],
+    [px + state.player.w - 2, py + state.player.h - 2],
+    [px + state.player.w / 2, py + state.player.h / 2],
+  ];
+  return points.every(([x, y]) => {
+    const tx = Math.floor(x / TILE);
+    const ty = Math.floor(y / TILE);
+    return isWalkableTile(tx, ty, flying);
+  });
+}
+
+function tileToSpawnPixels(tx, ty) {
+  return {
+    x: tx * TILE + (TILE - state.player.w) / 2,
+    y: ty * TILE + (TILE - state.player.h) / 2,
+  };
+}
+
+function resolvePlayerPosition() {
+  if (isPlayerPositionWalkable(state.player.x, state.player.y)) return;
+
+  const origins = [
+    SPAWN_TILE,
+    { tx: 13, ty: 22 },
+    { tx: 15, ty: 22 },
+    { tx: 14, ty: 23 },
+    { tx: 12, ty: 22 },
+    { tx: 10, ty: 22 },
+  ];
+
+  for (const origin of origins) {
+    for (let r = 0; r < 12; r++) {
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          const tx = origin.tx + dx;
+          const ty = origin.ty + dy;
+          const pos = tileToSpawnPixels(tx, ty);
+          if (isPlayerPositionWalkable(pos.x, pos.y)) {
+            state.player.x = pos.x;
+            state.player.y = pos.y;
+            return;
+          }
         }
       }
     }
   }
 
-  // Move the enemies back and forth
-  for (const e of enemies) {
-    e.x += e.vx;
-    if (e.x < e.minX || e.x + e.w > e.maxX) e.vx *= -1;
+  const fallback = tileToSpawnPixels(SPAWN_TILE.tx, SPAWN_TILE.ty);
+  state.player.x = fallback.x;
+  state.player.y = fallback.y;
+}
+
+const worldMap = generateMap();
+
+const MAX_WILD_DRAGONS = 45;
+let wildOverworld = [];
+let wildDragonIdCounter = 0;
+let wildRespawnTimer = 0;
+
+function spawnWildDragonsOnMap() {
+  wildOverworld = [];
+  wildDragonIdCounter = 0;
+  const candidates = [];
+  for (let y = 3; y < MAP_H - 3; y++) {
+    for (let x = 3; x < MAP_W - 3; x++) {
+      const t = worldMap[y][x];
+      if (t === 4) candidates.push({ x, y });
+      else if (t === 0 && Math.random() < 0.015) candidates.push({ x, y });
+    }
+  }
+  for (let i = candidates.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+  }
+  const count = Math.min(MAX_WILD_DRAGONS, candidates.length);
+  for (let i = 0; i < count; i++) {
+    wildOverworld.push(createWildOverworldDragon(candidates[i].x, candidates[i].y));
+  }
+}
+
+function createWildOverworldDragon(tx, ty) {
+  const speciesId = WILD_POOL[Math.floor(Math.random() * WILD_POOL.length)];
+  return {
+    id: ++wildDragonIdCounter,
+    speciesId,
+    x: tx * TILE + 6,
+    y: ty * TILE + 4,
+    w: 28,
+    h: 24,
+    level: 1 + Math.floor(Math.random() * 5),
+    miniPet: Math.random() < 0.28 ? randomMiniPet() : null,
+    moveTimer: 40 + Math.floor(Math.random() * 80),
+    bob: Math.random() * Math.PI * 2,
+  };
+}
+
+function isWildDragonTile(tx, ty) {
+  const t = worldMap[ty]?.[tx];
+  return t === 0 || t === 4;
+}
+
+function updateWildDragons() {
+  if (state.mode !== "overworld") return;
+
+  wildOverworld.forEach((d) => {
+    d.bob += 0.08;
+    d.moveTimer--;
+    if (d.moveTimer > 0) return;
+    d.moveTimer = 50 + Math.floor(Math.random() * 90);
+
+    const dirs = [
+      [0, 0],
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ];
+    const [mx, my] = dirs[Math.floor(Math.random() * dirs.length)];
+    const nx = d.x + mx * 8;
+    const ny = d.y + my * 8;
+    const tx = Math.floor((nx + d.w / 2) / TILE);
+    const ty = Math.floor((ny + d.h / 2) / TILE);
+    if (isWildDragonTile(tx, ty) && !wildDragonAtTile(tx, ty, d.id)) {
+      d.x = nx;
+      d.y = ny;
+    }
+  });
+
+  wildRespawnTimer++;
+  if (wildRespawnTimer > 480 && wildOverworld.length < MAX_WILD_DRAGONS) {
+    wildRespawnTimer = 0;
+    tryRespawnWildDragon();
+  }
+}
+
+function wildDragonAtTile(tx, ty, ignoreId) {
+  return wildOverworld.some((d) => {
+    if (d.id === ignoreId) return false;
+    const dx = Math.floor((d.x + d.w / 2) / TILE);
+    const dy = Math.floor((d.y + d.h / 2) / TILE);
+    return dx === tx && dy === ty;
+  });
+}
+
+function tryRespawnWildDragon() {
+  for (let n = 0; n < 30; n++) {
+    const tx = 4 + Math.floor(Math.random() * (MAP_W - 8));
+    const ty = 4 + Math.floor(Math.random() * (MAP_H - 8));
+    if (worldMap[ty][tx] === 4 && !wildDragonAtTile(tx, ty, -1)) {
+      wildOverworld.push(createWildOverworldDragon(tx, ty));
+      return;
+    }
+  }
+}
+
+spawnWildDragonsOnMap();
+
+function tileAt(px, py) {
+  const tx = Math.floor(px / TILE);
+  const ty = Math.floor(py / TILE);
+  if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return 2;
+  return worldMap[ty][tx];
+}
+
+function isBlocked(tile, flying) {
+  if (flying) return tile === 2;
+  return tile === 2 || tile === 3;
+}
+
+function showToast(msg, ms = 2500) {
+  els.toast.textContent = msg;
+  els.toast.classList.remove("hidden");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => els.toast.classList.add("hidden"), ms);
+}
+
+function drawHero(targetCtx, cx, cy, w, h, hero, scale = 1) {
+  const hc = hero || state.hero;
+  const centerX = cx + w / 2;
+  const headY = cy + 6 * scale;
+
+  targetCtx.fillStyle = hc.pants;
+  targetCtx.fillRect(cx + 4 * scale, cy + 14 * scale, w - 8 * scale, h - 16 * scale);
+
+  targetCtx.fillStyle = hc.shirt;
+  targetCtx.fillRect(cx + 3 * scale, cy + 10 * scale, w - 6 * scale, 10 * scale);
+
+  targetCtx.fillStyle = hc.skin;
+  targetCtx.beginPath();
+  targetCtx.arc(centerX, headY, 9 * scale, 0, Math.PI * 2);
+  targetCtx.fill();
+
+  targetCtx.fillStyle = hc.hair;
+  if (hc.hairStyle === "long") {
+    targetCtx.fillRect(centerX - 10 * scale, headY - 10 * scale, 20 * scale, 14 * scale);
+    targetCtx.fillRect(centerX - 12 * scale, headY - 2 * scale, 6 * scale, 18 * scale);
+    targetCtx.fillRect(centerX + 6 * scale, headY - 2 * scale, 6 * scale, 18 * scale);
+  } else if (hc.hairStyle === "spiky") {
+    for (let i = -2; i <= 2; i++) {
+      targetCtx.beginPath();
+      targetCtx.moveTo(centerX + i * 4 * scale, headY - 6 * scale);
+      targetCtx.lineTo(centerX + i * 6 * scale, headY - 16 * scale);
+      targetCtx.lineTo(centerX + (i + 0.5) * 4 * scale, headY - 6 * scale);
+      targetCtx.fill();
+    }
+  } else {
+    targetCtx.fillRect(centerX - 9 * scale, headY - 9 * scale, 18 * scale, 8 * scale);
   }
 
-  // Did an enemy touch the player?
-  if (player.invuln > 0) player.invuln--;
-  else {
-    for (const e of enemies) {
-      if (overlap(player, e)) {
-        lives--;
-        if (lives <= 0) { state = "lost"; }
-        else { respawnPlayer(); }
-        break;
+  if (hc.hat === "cap") {
+    targetCtx.fillStyle = "#e63946";
+    targetCtx.fillRect(centerX - 11 * scale, headY - 12 * scale, 22 * scale, 6 * scale);
+    targetCtx.fillRect(centerX - 14 * scale, headY - 8 * scale, 8 * scale, 4 * scale);
+  } else if (hc.hat === "crown") {
+    targetCtx.fillStyle = "#ffd700";
+    targetCtx.fillRect(centerX - 10 * scale, headY - 14 * scale, 20 * scale, 5 * scale);
+    targetCtx.fillRect(centerX - 8 * scale, headY - 18 * scale, 4 * scale, 5 * scale);
+    targetCtx.fillRect(centerX - 2 * scale, headY - 20 * scale, 4 * scale, 7 * scale);
+    targetCtx.fillRect(centerX + 4 * scale, headY - 18 * scale, 4 * scale, 5 * scale);
+  }
+
+  targetCtx.fillStyle = "#222";
+  targetCtx.fillRect(centerX - 5 * scale, headY - 2 * scale, 3 * scale, 3 * scale);
+  targetCtx.fillRect(centerX + 2 * scale, headY - 2 * scale, 3 * scale, 3 * scale);
+
+  const weapon = getEquippedWeapon();
+  if (weapon) {
+    targetCtx.fillStyle = "#adb5bd";
+    targetCtx.save();
+    targetCtx.translate(cx + w - 2 * scale, cy + 12 * scale);
+    targetCtx.rotate(-0.5);
+    targetCtx.fillRect(0, 0, 3 * scale, 14 * scale);
+    targetCtx.fillStyle = weapon.id === "stormHammer" ? "#7b2cbf" : "#ffd166";
+    targetCtx.fillRect(-2 * scale, -4 * scale, 7 * scale, 5 * scale);
+    targetCtx.restore();
+  }
+}
+
+function drawHeroPreviewCanvas(canvasEl) {
+  if (!canvasEl) return;
+  const s = canvasEl.getContext("2d");
+  s.clearRect(0, 0, canvasEl.width, canvasEl.height);
+  drawHero(s, 20, 10, 60, 80, state.hero, 1.2);
+}
+
+function readHeroFromCustomizeForm() {
+  state.hero = {
+    skin: els.optSkin?.value || DEFAULT_HERO.skin,
+    hair: els.optHair?.value || DEFAULT_HERO.hair,
+    shirt: els.optShirt?.value || DEFAULT_HERO.shirt,
+    pants: els.optPants?.value || DEFAULT_HERO.pants,
+    hairStyle: els.optHairstyle?.value || DEFAULT_HERO.hairStyle,
+    hat: els.optHat?.value || DEFAULT_HERO.hat,
+  };
+  drawHeroPreviewCanvas(els.heroPreview);
+  drawHeroPreviewCanvas(els.startHeroPreview);
+  window.GameCore?.onHeroChanged?.();
+  saveGame();
+}
+
+function syncCustomizeFormFromHero() {
+  if (!els.optSkin) return;
+  els.optSkin.value = state.hero.skin;
+  els.optHair.value = state.hero.hair;
+  els.optShirt.value = state.hero.shirt;
+  els.optPants.value = state.hero.pants;
+  els.optHairstyle.value = state.hero.hairStyle;
+  els.optHat.value = state.hero.hat;
+  drawHeroPreviewCanvas(els.heroPreview);
+  drawHeroPreviewCanvas(els.startHeroPreview);
+}
+
+function openCustomizePanel() {
+  syncCustomizeFormFromHero();
+  state.uiLock = true;
+  els.customizePanel?.classList.remove("hidden");
+}
+
+function closeCustomizePanel() {
+  readHeroFromCustomizeForm();
+  state.uiLock = false;
+  els.customizePanel?.classList.add("hidden");
+}
+
+function renderInventory() {
+  if (!els.weaponList) return;
+  const equipped = getEquippedWeapon();
+  els.equippedWeaponLabel.textContent = equipped
+    ? `Equipped: ${equipped.emoji} ${equipped.name} — ${equipped.desc}`
+    : "No weapon equipped";
+  els.weaponList.innerHTML = "";
+  state.weaponBag.forEach((wid) => {
+    const w = WEAPONS[wid];
+    if (!w) return;
+    const li = document.createElement("li");
+    if (wid === state.equippedWeaponId) li.classList.add("equipped");
+    li.innerHTML = `<span>${w.emoji} <strong>${w.name}</strong> — ${w.desc}</span>`;
+    const btn = document.createElement("button");
+    btn.textContent = wid === state.equippedWeaponId ? "Equipped" : "Equip";
+    btn.disabled = wid === state.equippedWeaponId;
+    btn.addEventListener("click", () => {
+      state.equippedWeaponId = wid;
+      renderInventory();
+      updateHud();
+      saveGame();
+      showToast(`Equipped ${w.name}!`);
+    });
+    li.appendChild(btn);
+    els.weaponList.appendChild(li);
+  });
+}
+
+function openInventory() {
+  renderInventory();
+  state.uiLock = true;
+  els.inventoryPanel?.classList.remove("hidden");
+}
+
+function closeInventory() {
+  state.uiLock = false;
+  els.inventoryPanel?.classList.add("hidden");
+}
+
+function getWeaponBattleBonuses(attacker, defender) {
+  const w = getEquippedWeapon();
+  if (!w) return { atkFlat: 0, atkMult: 1, tameBonus: 0, powerCdReduce: 0 };
+  let atkMult = w.atkMult || 1;
+  if (w.dragonTypeBoost && attacker.type === w.dragonTypeBoost) {
+    atkMult *= w.typeBoostMult || 1.2;
+  }
+  if (w.bonusVs && defender?.type === w.bonusVs) {
+    atkMult *= w.bonusVsMult || 1.3;
+  }
+  return {
+    atkFlat: w.atkFlat || 0,
+    atkMult,
+    tameBonus: w.tameBonus || 0,
+    powerCdReduce: w.powerCdReduce || 0,
+    healOnAttack: w.healOnAttack || 0,
+  };
+}
+
+function maybeAwardWeapon() {
+  const available = WEAPON_POOL.filter((id) => !state.weaponBag.includes(id));
+  if (available.length === 0 || Math.random() > 0.2) return;
+  const id = available[Math.floor(Math.random() * available.length)];
+  addWeapon(id);
+  const w = WEAPONS[id];
+  showToast(`Found ${w.emoji} ${w.name}! Press I to equip.`, 3500);
+}
+
+function drawDragonSprite(c, speciesId, scale = 1) {
+  const d = DRAGONS[speciesId];
+  const s = c.getContext("2d");
+  const w = c.width;
+  const h = c.height;
+  s.clearRect(0, 0, w, h);
+  const cx = w / 2;
+  const cy = h / 2 + 10;
+
+  s.fillStyle = d.color;
+  s.beginPath();
+  s.ellipse(cx, cy, 28 * scale, 22 * scale, 0, 0, Math.PI * 2);
+  s.fill();
+
+  s.fillStyle = d.accent;
+  s.beginPath();
+  s.moveTo(cx + 20 * scale, cy - 15 * scale);
+  s.lineTo(cx + 45 * scale, cy - 35 * scale);
+  s.lineTo(cx + 15 * scale, cy - 5 * scale);
+  s.fill();
+
+  s.fillStyle = "#fff";
+  s.beginPath();
+  s.arc(cx - 8 * scale, cy - 5 * scale, 5 * scale, 0, Math.PI * 2);
+  s.arc(cx + 8 * scale, cy - 5 * scale, 5 * scale, 0, Math.PI * 2);
+  s.fill();
+  s.fillStyle = "#222";
+  s.beginPath();
+  s.arc(cx - 8 * scale, cy - 5 * scale, 2 * scale, 0, Math.PI * 2);
+  s.arc(cx + 8 * scale, cy - 5 * scale, 2 * scale, 0, Math.PI * 2);
+  s.fill();
+
+  if (d.canFly) {
+    s.fillStyle = "rgba(255,255,255,0.6)";
+    s.beginPath();
+    s.ellipse(cx - 25 * scale, cy, 12 * scale, 8 * scale, -0.3, 0, Math.PI * 2);
+    s.ellipse(cx + 25 * scale, cy, 12 * scale, 8 * scale, 0.3, 0, Math.PI * 2);
+    s.fill();
+  }
+}
+
+function drawMiniPetOnCanvas(s, miniPet, cx, cy, scale = 1) {
+  if (!miniPet) return;
+  s.fillStyle = miniPet.color;
+  s.beginPath();
+  s.arc(cx - 30 * scale, cy + 18 * scale, 10 * scale, 0, Math.PI * 2);
+  s.fill();
+  s.fillStyle = "#fff";
+  s.beginPath();
+  s.arc(cx - 33 * scale, cy + 16 * scale, 2 * scale, 0, Math.PI * 2);
+  s.arc(cx - 27 * scale, cy + 16 * scale, 2 * scale, 0, Math.PI * 2);
+  s.fill();
+}
+
+function drawDragonSpriteWithPet(c, speciesId, miniPet, scale = 1) {
+  drawDragonSprite(c, speciesId, scale);
+  const s = c.getContext("2d");
+  drawMiniPetOnCanvas(s, miniPet, c.width / 2, c.height / 2 + 10, scale);
+}
+
+function updateHud() {
+  const pet = state.party[state.activePet];
+  const modeLabels = {
+    overworld: "Exploring",
+    home: "Home — decorate",
+    village: state.hammerMode ? "Village — break" : "Village — build",
+    battle: "Battle",
+  };
+  els.hudMode.textContent = `Mode: ${modeLabels[state.mode] || state.mode}`;
+  els.hudLocation.textContent =
+    state.flying ? "✈️ Flying!" : state.mounted ? "🐎 Riding" : "🚶 On foot";
+  const petTag = (d) => (d.miniPet ? ` ${d.miniPet.emoji}` : "");
+  els.hudParty.textContent = `Party: ${state.party.map((p, i) => (i === state.activePet ? `[${p.name}${petTag(p)}]` : `${p.name}${petTag(p)}`)).join(" · ")}`;
+  const w = getEquippedWeapon();
+  if (els.hudWeapon) {
+    els.hudWeapon.textContent = w ? `Weapon: ${w.emoji} ${w.name}` : "Weapon: none";
+  }
+}
+
+function playerDragonCenter() {
+  return { x: state.player.x + state.player.w / 2, y: state.player.y + state.player.h / 2 };
+}
+
+function wildDragonCenter(d) {
+  return { x: d.x + d.w / 2, y: d.y + d.h / 2 };
+}
+
+function startEncounterWithWild(overworldDragon) {
+  if (state.encounterCooldown > 0 || state.mode !== "overworld") return;
+  state.wild = makeDragon(overworldDragon.speciesId, overworldDragon.level);
+  state.wild.maxHp = state.wild.hp;
+  state.wild.miniPet = overworldDragon.miniPet
+    ? { ...overworldDragon.miniPet }
+    : null;
+  state.encounterDragonId = overworldDragon.id;
+  showToast(`A wild ${state.wild.name} appeared!`);
+  startBattle();
+}
+
+function checkWildDragonTouch() {
+  if (state.encounterCooldown > 0 || state.mode !== "overworld") return;
+  const pc = playerDragonCenter();
+  for (const d of wildOverworld) {
+    const wc = wildDragonCenter(d);
+    if (Math.hypot(pc.x - wc.x, pc.y - wc.y) < 30) {
+      startEncounterWithWild(d);
+      return;
+    }
+  }
+}
+
+function tryEncounter() {
+  if (state.encounterCooldown > 0 || state.mode !== "overworld") return;
+  const tx = Math.floor(state.player.x / TILE);
+  const ty = Math.floor(state.player.y / TILE);
+  if (worldMap[ty]?.[tx] !== 4) return;
+
+  const pc = playerDragonCenter();
+  for (const d of wildOverworld) {
+    const wc = wildDragonCenter(d);
+    if (Math.hypot(pc.x - wc.x, pc.y - wc.y) < TILE * 2.5) return;
+  }
+
+  if (Math.random() > 0.05) return;
+
+  const speciesId = WILD_POOL[Math.floor(Math.random() * WILD_POOL.length)];
+  const level = 1 + Math.floor(Math.random() * 4);
+  state.wild = makeDragon(speciesId, level);
+  state.wild.maxHp = state.wild.hp;
+  state.encounterDragonId = null;
+  if (Math.random() < 0.35) {
+    state.wild.miniPet = randomMiniPet();
+  }
+  startBattle();
+}
+
+function startBattle() {
+  state.mode = "battle";
+  state.battle = { busy: false, powerCd: 0, petCd: 0, weaponCd: 0, playerShield: 0, wildFrozen: 0 };
+  els.battleUi.classList.remove("hidden");
+  els.wildName.textContent = state.wild.name;
+  const wildPet = state.wild.miniPet ? ` + ${state.wild.miniPet.name}` : "";
+  els.wildLabel.textContent = `${state.wild.name} Lv.${state.wild.level}${wildPet}`;
+  const active = state.party[state.activePet];
+  const activePet = active.miniPet ? ` · ${active.miniPet.emoji} ${active.miniPet.name}` : "";
+  els.playerDragonName.textContent = `${active.name} Lv.${active.level}${activePet}`;
+  drawDragonSpriteWithPet(els.playerSprite, active.speciesId, active.miniPet);
+  drawDragonSpriteWithPet(els.wildSprite, state.wild.speciesId, state.wild.miniPet);
+  updateBattleHp();
+  updateBattleUi();
+  const pw = getPower(active);
+  const wpn = getEquippedWeapon();
+  let intro = `Wild ${state.wild.name} appears! Power: ${pw.name}.`;
+  if (wpn) intro += ` Weapon: ${wpn.name}.`;
+  els.battleLog.textContent = intro;
+  setBattleButtons(true);
+  updateHud();
+  window.GameCore?.onBattleStart?.();
+}
+
+function updateBattleUi() {
+  const active = state.party[state.activePet];
+  const pw = getPower(active);
+  const b = state.battle;
+  if (!b) return;
+
+  let info = `⚡ ${pw.name}: ${pw.desc}`;
+  if (active.miniPet) info += ` · 🐾 ${active.miniPet.name} (${active.miniPet.bonus})`;
+  els.battlePowerInfo.textContent = info;
+
+  if (els.btnPower) {
+    els.btnPower.textContent = b.powerCd > 0 ? `⚡ (${b.powerCd})` : `⚡ ${pw.name}`;
+    els.btnPower.disabled = b.busy || b.powerCd > 0;
+  }
+  const wpn = getEquippedWeapon();
+  if (els.btnWeapon) {
+    if (!wpn) {
+      els.btnWeapon.style.display = "none";
+    } else {
+      els.btnWeapon.style.display = "";
+      els.btnWeapon.textContent = b.weaponCd > 0 ? `${wpn.emoji} (${b.weaponCd})` : `${wpn.emoji} ${wpn.activeName}`;
+      els.btnWeapon.disabled = b.busy || b.weaponCd > 0;
+    }
+  }
+  if (els.btnPetHelp) {
+    const hasPet = !!active.miniPet;
+    els.btnPetHelp.style.display = hasPet ? "" : "none";
+    if (hasPet) {
+      els.btnPetHelp.textContent = b.petCd > 0 ? `🐾 (${b.petCd})` : `🐾 ${active.miniPet.name}`;
+      els.btnPetHelp.disabled = b.busy || b.petCd > 0;
+    }
+  }
+}
+
+function updateBattleHp() {
+  const p = state.party[state.activePet];
+  const w = state.wild;
+  els.playerHpFill.style.width = `${(p.hp / p.maxHp) * 100}%`;
+  els.wildHpFill.style.width = `${(w.hp / w.maxHp) * 100}%`;
+}
+
+function setBattleButtons(enabled) {
+  document.querySelectorAll(".battle-buttons button").forEach((b) => {
+    if (b.id === "btn-power" || b.id === "btn-pethelp" || b.id === "btn-weapon") return;
+    b.disabled = !enabled;
+  });
+  updateBattleUi();
+}
+
+function tickBattleCooldowns() {
+  const b = state.battle;
+  if (!b) return;
+  if (b.powerCd > 0) b.powerCd--;
+  if (b.petCd > 0) b.petCd--;
+  if (b.weaponCd > 0) b.weaponCd--;
+  if (b.wildFrozen > 0) b.wildFrozen--;
+}
+
+function typeMultiplier(attacker, defender) {
+  const chart = {
+    fire: { ice: 1.5, nature: 1.5, water: 0.5 },
+    ice: { nature: 1.5, fire: 0.5 },
+    nature: { storm: 1.5, fire: 0.5 },
+    storm: { sky: 1.5, nature: 0.5 },
+    sky: { nature: 1.5, storm: 0.5 },
+    dark: { sky: 1.5, nature: 1.5 },
+  };
+  return chart[attacker]?.[defender] ?? 1;
+}
+
+function calcDamage(attacker, defender, powerMult = 1, pierce = false, useWeapon = true) {
+  let mult = typeMultiplier(attacker.type, defender.type);
+  if (pierce && mult < 1) mult = 1;
+  let base = attacker.atk * (0.85 + Math.random() * 0.3) * powerMult;
+  if (useWeapon && state.party.some((d) => d === attacker)) {
+    const wb = getWeaponBattleBonuses(attacker, defender);
+    base = base * wb.atkMult + wb.atkFlat;
+  }
+  return Math.max(1, Math.floor(base * mult));
+}
+
+function applyWeaponHealOnAttack(active) {
+  const w = getEquippedWeapon();
+  if (!w?.healOnAttack) return;
+  active.hp = Math.min(active.maxHp, active.hp + w.healOnAttack);
+}
+
+function useWeaponStrike(active, wild) {
+  const w = getEquippedWeapon();
+  const b = state.battle;
+  if (!w) return;
+
+  let dmg = calcDamage(active, wild, w.activeMult, false, true);
+  if (w.bonusVs && wild.type === w.bonusVs) {
+    dmg = Math.floor(dmg * (w.bonusVsMult || 1.3));
+  }
+
+  b.weaponCd = 2;
+  let msg = `You swing ${w.name} — ${w.activeName} for ${dmg} damage!`;
+
+  if (w.freezeChance && Math.random() < w.freezeChance) {
+    b.wildFrozen = 2;
+    msg += " Frozen!";
+  }
+
+  wild.hp = Math.max(0, wild.hp - dmg);
+  updateBattleHp();
+
+  if (wild.hp <= 0) {
+    els.battleLog.textContent = msg;
+    setTimeout(() => {
+      maybeAwardMiniPet();
+      maybeAwardWeapon();
+      showToast(`Wild ${wild.name} fainted!`);
+      endBattle(true);
+    }, 800);
+    return;
+  }
+
+  els.battleLog.textContent = msg;
+  setTimeout(wildTurn, 900);
+}
+
+function applyDamageToWild(active, wild, dmg, logPrefix) {
+  wild.hp = Math.max(0, wild.hp - dmg);
+  updateBattleHp();
+  els.battleLog.textContent = `${logPrefix} ${dmg} damage!`;
+  if (wild.hp <= 0) {
+    setTimeout(() => {
+      maybeAwardMiniPet();
+      maybeAwardWeapon();
+      showToast(`Wild ${wild.name} fainted!`);
+      endBattle(true);
+    }, 800);
+    return true;
+  }
+  return false;
+}
+
+function maybeAwardMiniPet() {
+  if (Math.random() > 0.22) return;
+  const pet = randomMiniPet();
+  state.miniPetBag.push(pet);
+  showToast(`Found a ${pet.name} ${pet.emoji}! Press P at Pet Grove to assign.`, 3500);
+}
+
+function usePower(active, wild) {
+  const pw = getPower(active);
+  const b = state.battle;
+  let petMult = 1;
+  if (active.miniPet?.bonus === "powerBoost") petMult = active.miniPet.value;
+
+  if (pw.effect === "heal") {
+    const heal = Math.floor(active.maxHp * pw.healRatio);
+    active.hp = Math.min(active.maxHp, active.hp + heal);
+    updateBattleHp();
+    els.battleLog.textContent = `${active.name} used ${pw.name} and healed ${heal} HP!`;
+    const wb = getWeaponBattleBonuses(active, wild);
+    b.powerCd = Math.max(1, 3 - (wb.powerCdReduce || 0));
+    setTimeout(wildTurn, 900);
+    return;
+  }
+
+  let dmg = calcDamage(active, wild, pw.mult * petMult, pw.pierce);
+  if (pw.effect === "drain") {
+    const heal = Math.floor(dmg * pw.drainRatio);
+    active.hp = Math.min(active.maxHp, active.hp + heal);
+    els.battleLog.textContent = `${active.name}'s ${pw.name} deals ${dmg} and drains ${heal} HP!`;
+  } else {
+    els.battleLog.textContent = `${active.name} used ${pw.name} for ${dmg} damage!`;
+  }
+
+  if (pw.recoil) {
+    const recoil = Math.max(1, Math.floor(active.maxHp * pw.recoil));
+    active.hp = Math.max(1, active.hp - recoil);
+  }
+
+  if (pw.status === "freeze" && Math.random() < (pw.statusChance || 0)) {
+    b.wildFrozen = 2;
+    els.battleLog.textContent += " The foe is frozen!";
+  }
+
+  wild.hp = Math.max(0, wild.hp - dmg);
+  updateBattleHp();
+  const wb = getWeaponBattleBonuses(active, wild);
+  b.powerCd = Math.max(1, 3 - (wb.powerCdReduce || 0));
+
+  if (wild.hp <= 0) {
+    setTimeout(() => {
+      maybeAwardMiniPet();
+      maybeAwardWeapon();
+      showToast(`Wild ${wild.name} fainted!`);
+      endBattle(true);
+    }, 800);
+    return;
+  }
+  setTimeout(wildTurn, 900);
+}
+
+function usePetHelp(active, wild) {
+  const mp = active.miniPet;
+  const b = state.battle;
+  b.petCd = 3;
+
+  if (mp.bonus === "heal") {
+    active.hp = Math.min(active.maxHp, active.hp + mp.value);
+    updateBattleHp();
+    els.battleLog.textContent = `${mp.name} ${mp.emoji} healed ${active.name} for ${mp.value} HP!`;
+    setTimeout(wildTurn, 900);
+    return;
+  }
+
+  if (mp.bonus === "shield") {
+    b.playerShield = mp.value;
+    els.battleLog.textContent = `${mp.name} ${mp.emoji} shields ${active.name} from the next hit!`;
+    setTimeout(wildTurn, 900);
+    return;
+  }
+
+  let dmg = mp.value;
+  if (mp.bonus === "damage") {
+    dmg = calcDamage(active, wild, 0.5) + mp.value;
+  }
+
+  if (mp.bonus === "lifesteal") {
+    wild.hp = Math.max(0, wild.hp - dmg);
+    const heal = Math.floor(dmg * mp.value);
+    active.hp = Math.min(active.maxHp, active.hp + heal);
+    updateBattleHp();
+    els.battleLog.textContent = `${mp.name} ${mp.emoji} swoops for ${dmg} and heals ${heal}!`;
+  } else {
+    if (applyDamageToWild(active, wild, dmg, `${mp.name} ${mp.emoji} helps for`)) return;
+  }
+
+  setTimeout(wildTurn, 900);
+}
+
+function wildUsePower(wild, active) {
+  const pw = getPower(wild);
+  if (pw.effect === "heal") {
+    const heal = Math.floor(wild.maxHp * pw.healRatio);
+    wild.hp = Math.min(wild.maxHp, wild.hp + heal);
+    return `${wild.name} used ${pw.name} (+${heal} HP)!`;
+  }
+  let dmg = calcDamage(wild, active, pw.mult, pw.pierce);
+  if (state.battle.playerShield > 0) {
+    dmg = Math.floor(dmg * (1 - state.battle.playerShield));
+    state.battle.playerShield = 0;
+  }
+  active.hp = Math.max(0, active.hp - dmg);
+  if (pw.recoil) wild.hp = Math.max(1, wild.hp - Math.floor(wild.maxHp * pw.recoil));
+  return `Wild ${wild.name} used ${pw.name} for ${dmg} damage!`;
+}
+
+function endBattle(won, ran = false) {
+  els.battleUi.classList.add("hidden");
+  window.GameCore?.onBattleEnd?.();
+  state.mode = "overworld";
+  if (state.encounterDragonId != null) {
+    if (ran) {
+      const fled = wildOverworld.find((d) => d.id === state.encounterDragonId);
+      if (fled) {
+        fled.x += (Math.random() - 0.5) * 80;
+        fled.y += (Math.random() - 0.5) * 80;
+        clampWildDragonPosition(fled);
       }
+    } else if (won) {
+      wildOverworld = wildOverworld.filter((d) => d.id !== state.encounterDragonId);
+    }
+    state.encounterDragonId = null;
+  }
+  state.wild = null;
+  state.battle = null;
+  state.encounterCooldown = 120;
+  if (ran) showToast("You got away safely!");
+  else if (won) showToast("Battle won!");
+  updateHud();
+  saveGame();
+}
+
+function battleAction(action) {
+  if (!state.battle || state.battle.busy) return;
+  const active = state.party[state.activePet];
+  const wild = state.wild;
+  const b = state.battle;
+
+  if (action === "run") {
+    if (Math.random() < 0.85) {
+      endBattle(false, true);
+    } else {
+      els.battleLog.textContent = "Can't escape!";
+      setTimeout(wildTurn, 600);
+    }
+    return;
+  }
+
+  if (action === "power" && b.powerCd > 0) return;
+  if (action === "pethelp" && (b.petCd > 0 || !active.miniPet)) return;
+  if (action === "weapon" && (b.weaponCd > 0 || !getEquippedWeapon())) return;
+
+  b.busy = true;
+  setBattleButtons(false);
+
+  if (action === "attack") {
+    const dmg = calcDamage(active, wild);
+    applyWeaponHealOnAttack(active);
+    if (applyDamageToWild(active, wild, dmg, `${active.name} strikes for`)) return;
+    setTimeout(wildTurn, 900);
+    return;
+  }
+
+  if (action === "power") {
+    usePower(active, wild);
+    return;
+  }
+
+  if (action === "pethelp") {
+    usePetHelp(active, wild);
+    return;
+  }
+
+  if (action === "weapon") {
+    useWeaponStrike(active, wild);
+    return;
+  }
+
+  if (action === "tame") {
+    const hpRatio = wild.hp / wild.maxHp;
+    const petBonus = active.miniPet ? 0.08 : 0;
+    const wb = getWeaponBattleBonuses(active, wild);
+    const chance = (1 - hpRatio) * 0.55 + 0.15 + petBonus + (wb.tameBonus || 0);
+    if (Math.random() < chance) {
+      if (state.party.length >= 6) {
+        els.battleLog.textContent = "Your party is full! Release a dragon first.";
+        b.busy = false;
+        setBattleButtons(true);
+        return;
+      }
+      const caught = normalizeDragon({ ...wild, hp: wild.maxHp, maxHp: wild.maxHp });
+      state.party.push(caught);
+      const petMsg = caught.miniPet ? ` Its ${caught.miniPet.name} came too!` : "";
+      els.battleLog.textContent = `Yes! ${wild.name} joined your party!${petMsg}`;
+      setTimeout(() => {
+        showToast(`${wild.name} is now your pet! 🐉`);
+        endBattle(true);
+      }, 1000);
+      return;
+    }
+    els.battleLog.textContent = `${wild.name} broke free! Weaken it more.`;
+    setTimeout(wildTurn, 900);
+  }
+}
+
+function wildTurn() {
+  const active = state.party[state.activePet];
+  const wild = state.wild;
+  const b = state.battle;
+
+  tickBattleCooldowns();
+
+  if (b.wildFrozen > 0) {
+    els.battleLog.textContent = `${wild.name} is frozen solid!`;
+    b.busy = false;
+    setBattleButtons(true);
+    updateBattleUi();
+    return;
+  }
+
+  let msg;
+  const useSpecial = Math.random() < 0.38;
+  const pw = getPower(wild);
+
+  if (useSpecial && pw.effect !== "heal") {
+    msg = wildUsePower(wild, active);
+  } else if (useSpecial && pw.effect === "heal" && wild.hp < wild.maxHp * 0.5) {
+    msg = wildUsePower(wild, active);
+  } else if (wild.miniPet && Math.random() < 0.3) {
+    let dmg = wild.miniPet.value;
+    if (wild.miniPet.bonus === "damage") dmg = calcDamage(wild, active, 0.4) + wild.miniPet.value;
+    if (b.playerShield > 0) {
+      dmg = Math.floor(dmg * (1 - b.playerShield));
+      b.playerShield = 0;
+    }
+    active.hp = Math.max(0, active.hp - dmg);
+    msg = `Wild ${wild.miniPet.name} ${wild.miniPet.emoji} helps for ${dmg} damage!`;
+  } else {
+    let dmg = calcDamage(wild, active);
+    if (b.playerShield > 0) {
+      dmg = Math.floor(dmg * (1 - b.playerShield));
+      b.playerShield = 0;
+    }
+    active.hp = Math.max(0, active.hp - dmg);
+    msg = `Wild ${wild.name} attacks for ${dmg} damage!`;
+  }
+
+  updateBattleHp();
+  els.battleLog.textContent = msg;
+
+  if (active.hp <= 0) {
+    setTimeout(() => {
+      els.battleLog.textContent = `${active.name} fainted!`;
+      const backup = state.party.findIndex((p, i) => i !== state.activePet && p.hp > 0);
+      if (backup >= 0) {
+        state.activePet = backup;
+        const next = state.party[backup];
+        els.playerDragonName.textContent = `${next.name} Lv.${next.level}`;
+        drawDragonSpriteWithPet(els.playerSprite, next.speciesId, next.miniPet);
+        active.hp = active.maxHp;
+        els.battleLog.textContent = `Go, ${next.name}!`;
+        b.busy = false;
+        setBattleButtons(true);
+        updateBattleUi();
+      } else {
+        showToast("All dragons fainted… You scurry to safety.");
+        state.party.forEach((p) => (p.hp = p.maxHp));
+        setTimeout(() => endBattle(false), 1200);
+      }
+    }, 900);
+    return;
+  }
+
+  b.busy = false;
+  setBattleButtons(true);
+  updateBattleUi();
+}
+
+document.querySelectorAll(".battle-buttons button").forEach((btn) => {
+  btn.addEventListener("click", () => battleAction(btn.dataset.action));
+});
+
+function screenToWorld(sx, sy) {
+  return {
+    x: sx + state.camera.x,
+    y: sy + state.camera.y,
+  };
+}
+
+function getGridPos(mode, sx, sy) {
+  const { x, y } = screenToWorld(sx, sy);
+  if (mode === "home") {
+    return { gx: Math.floor(x / TILE), gy: Math.floor(y / TILE), cols: HOME_W, rows: HOME_H };
+  }
+  if (mode === "village") {
+    const ox = (canvas.width - VILLAGE_W * TILE) / 2;
+    const oy = (canvas.height - VILLAGE_H * TILE) / 2;
+    return {
+      gx: Math.floor((x - ox) / TILE),
+      gy: Math.floor((y - oy) / TILE),
+      cols: VILLAGE_W,
+      rows: VILLAGE_H,
+    };
+  }
+  return null;
+}
+
+function bindCanvasClickHandler() {
+  const c = document.getElementById("game");
+  if (!c || c.dataset.clickBound) return;
+  c.dataset.clickBound = "1";
+  c.addEventListener("click", (e) => {
+  const rect = c.getBoundingClientRect();
+  const sx = ((e.clientX - rect.left) / rect.width) * 960;
+  const sy = ((e.clientY - rect.top) / rect.height) * 540;
+
+  if (state.mode === "home") {
+    const g = getGridPos("home", sx, sy);
+    if (!g || g.gx < 0 || g.gy < 0 || g.gx >= g.cols || g.gy >= g.rows) return;
+    if (g.gx < 1 || g.gy < 1) return;
+    const tool = DECOR[state.decorTool];
+    state.homeDecor.push({ type: state.decorTool, x: g.gx, y: g.gy });
+    showToast(`Placed ${tool.name}!`);
+    saveGame();
+    return;
+  }
+
+  if (state.mode === "village") {
+    const g = getGridPos("village", sx, sy);
+    if (!g || g.gx < 0 || g.gy < 0 || g.gx >= g.cols || g.gy >= g.rows) return;
+
+    if (state.hammerMode) {
+      state.villageGrid = state.villageGrid.filter(
+        (b) => !(b.x === g.gx && b.y === g.gy)
+      );
+      showToast("Building removed!");
+      saveGame();
+      return;
+    }
+
+    const b = BUILDINGS[state.buildTool];
+    state.villageGrid.push({ type: state.buildTool, x: g.gx, y: g.gy });
+    showToast(`Built ${b.name}!`);
+    saveGame();
+  }
+  });
+}
+
+function nearHouse() {
+  const tx = Math.floor(state.player.x / TILE);
+  const ty = Math.floor(state.player.y / TILE);
+  for (let dy = -1; dy <= 2; dy++)
+    for (let dx = -1; dx <= 2; dx++) {
+      const t = worldMap[ty + dy]?.[tx + dx];
+      if (t === 5) return true;
+    }
+  return false;
+}
+
+function inVillageZone() {
+  const tx = Math.floor(state.player.x / TILE);
+  const ty = Math.floor(state.player.y / TILE);
+  return worldMap[ty]?.[tx] === 6;
+}
+
+function nearPetGrove() {
+  const tx = Math.floor(state.player.x / TILE);
+  const ty = Math.floor(state.player.y / TILE);
+  for (let dy = -1; dy <= 2; dy++)
+    for (let dx = -1; dx <= 2; dx++) {
+      if (worldMap[ty + dy]?.[tx + dx] === 7) return true;
+    }
+  return false;
+}
+
+function assignMiniPetToActive() {
+  const dragon = activeDragon();
+  if (dragon.miniPet) {
+    showToast(`${dragon.name} already has ${dragon.miniPet.name}. Win battles for more pets.`);
+    return;
+  }
+  if (state.miniPetBag.length > 0) {
+    dragon.miniPet = state.miniPetBag.shift();
+    showToast(`${dragon.miniPet.name} ${dragon.miniPet.emoji} is now ${dragon.name}'s pet!`);
+    saveGame();
+    return;
+  }
+  if (nearPetGrove()) {
+    const affinity = DRAGON_PET_AFFINITY[dragon.speciesId];
+    dragon.miniPet = makeMiniPet(affinity) || randomMiniPet();
+    showToast(`At the Pet Grove, ${dragon.name} befriended ${dragon.miniPet.name} ${dragon.miniPet.emoji}!`);
+    saveGame();
+    return;
+  }
+  showToast("Visit the 🐾 Pet Grove (south) or win battles to find mini-pets!");
+}
+
+function activeDragon() {
+  return state.party[state.activePet];
+}
+
+function nearWeaponShrine() {
+  const tx = Math.floor(state.player.x / TILE);
+  const ty = Math.floor(state.player.y / TILE);
+  for (let dy = -1; dy <= 2; dy++)
+    for (let dx = -1; dx <= 2; dx++) {
+      if (worldMap[ty + dy]?.[tx + dx] === 8) return true;
+    }
+  return false;
+}
+
+function visitWeaponShrine() {
+  const available = WEAPON_POOL.filter((id) => !state.weaponBag.includes(id));
+  if (available.length === 0) {
+    showToast("You own every shrine weapon! Keep winning battles for luck.");
+    return;
+  }
+  const id = available[Math.floor(Math.random() * available.length)];
+  addWeapon(id);
+  const w = WEAPONS[id];
+  showToast(`Shrine gift: ${w.emoji} ${w.name}! Press I to equip.`, 3500);
+  saveGame();
+}
+
+function handleInput() {
+  if (state.mode === "battle" || state.uiLock) return;
+
+  let dx = 0;
+  let dy = 0;
+  if (keys["w"] || keys["arrowup"]) dy -= 1;
+  if (keys["s"] || keys["arrowdown"]) dy += 1;
+  if (keys["a"] || keys["arrowleft"]) dx -= 1;
+  if (keys["d"] || keys["arrowright"]) dx += 1;
+
+  if (dx || dy) {
+    const len = Math.hypot(dx, dy) || 1;
+    dx /= len;
+    dy /= len;
+    if (Math.abs(dx) > Math.abs(dy)) state.player.dir = dx > 0 ? "right" : "left";
+    else state.player.dir = dy > 0 ? "down" : "up";
+  }
+
+  let speed = state.player.speed;
+  if (state.mounted) speed *= 1.6;
+  if (state.flying) speed *= 2.2;
+
+  const nx = state.player.x + dx * speed;
+  const ny = state.player.y + dy * speed;
+
+  if (state.mode === "overworld") {
+    const t1 = tileAt(nx, state.player.y);
+    const t2 = tileAt(state.player.x, ny);
+    const t3 = tileAt(nx, ny);
+    if (!isBlocked(t1, state.flying)) state.player.x = nx;
+    if (!isBlocked(t2, state.flying)) state.player.y = ny;
+    if (dx || dy) tryEncounter();
+  } else if (state.mode === "home") {
+    const maxX = HOME_W * TILE - state.player.w;
+    const maxY = HOME_H * TILE - state.player.h;
+    state.player.x = Math.max(TILE, Math.min(maxX, nx));
+    state.player.y = Math.max(TILE, Math.min(maxY, ny));
+  }
+
+  if (keysJust.has("e") && state.mode === "overworld" && nearHouse()) {
+    state.mode = "home";
+    state.player.x = 3 * TILE;
+    state.player.y = 5 * TILE;
+    showToast("Welcome home! Press 1–5 for decor, click to place. E to leave.");
+  }
+  if (keysJust.has("e") && state.mode === "home") {
+    state.mode = "overworld";
+    const exit = tileToSpawnPixels(11, 23);
+    state.player.x = exit.x;
+    state.player.y = exit.y;
+    resolvePlayerPosition();
+    showToast("Back to the wild!");
+  }
+
+  if (keysJust.has("v") && state.mode === "overworld") {
+    if (inVillageZone()) {
+      state.mode = "village";
+      showToast("Village mode! 1–4 buildings, H hammer, click. V to exit.");
+    } else showToast("Walk to the village clearing on the far east!");
+  }
+  if (keysJust.has("v") && state.mode === "village") {
+    state.mode = "overworld";
+    showToast("Left village builder.");
+  }
+
+  if (keysJust.has("h") && state.mode === "village") {
+    state.hammerMode = !state.hammerMode;
+    showToast(state.hammerMode ? "Hammer: click to break!" : "Build mode.");
+  }
+
+  if (keysJust.has("m") && state.mode === "overworld") {
+    const pet = activeDragon();
+    if (pet.canRide) {
+      state.mounted = !state.mounted;
+      showToast(state.mounted ? `Riding ${pet.name}!` : "Dismounted.");
     }
   }
 
-  // Update the sparkle bursts
-  sparkles.forEach((s) => { s.x += s.vx; s.y += s.vy; s.life--; });
-  sparkles = sparkles.filter((s) => s.life > 0);
-
-  // Win when every coin is collected
-  if (coins.every((c) => c.got)) state = "won";
-}
-
-// ---- Drawing helpers ---------------------------------------------------
-function drawBackground() {
-  const sky = ctx.createLinearGradient(0, 0, 0, H);
-  sky.addColorStop(0, "#6ec6ff");
-  sky.addColorStop(1, "#bfe9ff");
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, W, H);
-
-  // sun
-  ctx.fillStyle = "#fff27a";
-  ctx.beginPath();
-  ctx.arc(800, 80, 45, 0, Math.PI * 2);
-  ctx.fill();
-
-  // clouds
-  ctx.fillStyle = "rgba(255,255,255,0.9)";
-  cloud(160, 90); cloud(420, 60); cloud(620, 120);
-}
-function cloud(x, y) {
-  ctx.beginPath();
-  ctx.arc(x, y, 24, 0, Math.PI * 2);
-  ctx.arc(x + 26, y + 6, 30, 0, Math.PI * 2);
-  ctx.arc(x + 58, y, 22, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-function drawPlatforms() {
-  for (const p of platforms) {
-    ctx.fillStyle = "#7a4b28";          // dirt
-    ctx.fillRect(p.x, p.y, p.w, p.h);
-    ctx.fillStyle = "#4caf50";          // grass on top
-    ctx.fillRect(p.x, p.y, p.w, 8);
+  if (keysJust.has("p") && state.mode === "overworld") {
+    assignMiniPetToActive();
   }
-}
 
-function drawCoins() {
-  for (const c of coins) {
-    if (c.got) continue;
-    const wobble = Math.sin(Date.now() / 200 + c.x) * 4;
-    ctx.fillStyle = "#ffcc00";
-    ctx.strokeStyle = "#e0a800";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(c.x, c.y + wobble, 13, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = "#fff3b0";
-    ctx.beginPath();
-    ctx.arc(c.x - 4, c.y + wobble - 4, 4, 0, Math.PI * 2);
-    ctx.fill();
+  if (keysJust.has("c")) {
+    openCustomizePanel();
   }
-}
-
-function drawEnemies() {
-  for (const e of enemies) {
-    ctx.fillStyle = "#8e44ad";
-    roundRect(e.x, e.y, e.w, e.h, 10);
-    ctx.fill();
-    // grumpy eyes
-    ctx.fillStyle = "#fff";
-    ctx.beginPath();
-    ctx.arc(e.x + 12, e.y + 16, 6, 0, Math.PI * 2);
-    ctx.arc(e.x + 28, e.y + 16, 6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#000";
-    ctx.beginPath();
-    ctx.arc(e.x + 12, e.y + 17, 3, 0, Math.PI * 2);
-    ctx.arc(e.x + 28, e.y + 17, 3, 0, Math.PI * 2);
-    ctx.fill();
+  if (keysJust.has("i")) {
+    openInventory();
   }
-}
-
-function drawPlayer() {
-  // blink while invulnerable
-  if (player.invuln > 0 && Math.floor(player.invuln / 6) % 2 === 0) return;
-
-  ctx.fillStyle = SETTINGS.playerColor;
-  roundRect(player.x, player.y, player.w, player.h, 10);
-  ctx.fill();
-
-  // eyes (look the way the player is moving)
-  const eyeX = player.x + player.w / 2 + player.face * 5;
-  ctx.fillStyle = "#fff";
-  ctx.beginPath();
-  ctx.arc(eyeX - 8, player.y + 16, 7, 0, Math.PI * 2);
-  ctx.arc(eyeX + 8, player.y + 16, 7, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#000";
-  ctx.beginPath();
-  ctx.arc(eyeX - 8 + player.face * 2, player.y + 16, 3.5, 0, Math.PI * 2);
-  ctx.arc(eyeX + 8 + player.face * 2, player.y + 16, 3.5, 0, Math.PI * 2);
-  ctx.fill();
-
-  // smile
-  ctx.strokeStyle = "#000";
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.arc(player.x + player.w / 2, player.y + 28, 7, 0, Math.PI);
-  ctx.stroke();
-}
-
-function drawSparkles() {
-  for (const s of sparkles) {
-    ctx.globalAlpha = s.life / 30;
-    ctx.fillStyle = "#fff27a";
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, 4, 0, Math.PI * 2);
-    ctx.fill();
+  if (keysJust.has("b") && state.mode === "overworld") {
+    if (nearWeaponShrine()) visitWeaponShrine();
+    else showToast("Find the ⚔️ Weapon Shrine — north, at the crossroads!");
   }
-  ctx.globalAlpha = 1;
-}
 
-function drawHUD() {
-  ctx.fillStyle = "#000";
-  ctx.font = "bold 22px Trebuchet MS";
-  ctx.textAlign = "left";
-  ctx.fillText("Score: " + score, 16, 32);
-
-  // hearts for lives
-  for (let i = 0; i < lives; i++) heart(W - 32 - i * 34, 22);
-}
-function heart(x, y) {
-  ctx.fillStyle = "#ff3b5c";
-  ctx.beginPath();
-  ctx.moveTo(x, y + 6);
-  ctx.bezierCurveTo(x, y, x - 11, y, x - 11, y + 7);
-  ctx.bezierCurveTo(x - 11, y + 14, x, y + 18, x, y + 22);
-  ctx.bezierCurveTo(x, y + 18, x + 11, y + 14, x + 11, y + 7);
-  ctx.bezierCurveTo(x + 11, y, x, y, x, y + 6);
-  ctx.fill();
-}
-
-function roundRect(x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
-
-function centerText(big, small, color) {
-  ctx.fillStyle = "rgba(0,0,0,0.55)";
-  ctx.fillRect(0, 0, W, H);
-  ctx.textAlign = "center";
-  ctx.fillStyle = color;
-  ctx.font = "bold 56px Trebuchet MS";
-  ctx.fillText(big, W / 2, H / 2 - 10);
-  ctx.fillStyle = "#fff";
-  ctx.font = "22px Trebuchet MS";
-  ctx.fillText(small, W / 2, H / 2 + 40);
-}
-
-// ---- Draw: paints everything on the screen -----------------------------
-function draw() {
-  drawBackground();
-  drawPlatforms();
-  drawCoins();
-  drawEnemies();
-  drawSparkles();
-  drawPlayer();
-  drawHUD();
-
-  if (state === "title") {
-    centerText("EZRA'S COIN QUEST", "Press SPACE or click to start", "#ffcc00");
-  } else if (state === "won") {
-    centerText("YOU WIN, " + SETTINGS.playerName.toUpperCase() + "!",
-               "Score: " + score + "  -  Press R to play again", "#7CFC00");
-  } else if (state === "lost") {
-    centerText("GAME OVER", "Press R to try again", "#ff5a5f");
+  if (keysJust.has("f") && state.mode === "overworld") {
+    const pet = activeDragon();
+    if (pet.canFly) {
+      state.flying = !state.flying;
+      state.flyTimer = state.flying ? 600 : 0;
+      showToast(state.flying ? "You soar through the sky! ✈️" : "Landed.");
+    } else showToast("You need a Sky Wyrm to fly! Tame one in tall grass.");
   }
+
+  if (state.flying) {
+    state.flyTimer--;
+    if (state.flyTimer <= 0) {
+      state.flying = false;
+      showToast("Flight energy ran out — landed.");
+    }
+  }
+
+  for (let i = 1; i <= 3; i++) {
+    if (keysJust.has(String(i)) && state.mode === "overworld" && state.party[i - 1]) {
+      state.activePet = i - 1;
+      showToast(`Active: ${state.party[i - 1].name}`);
+    }
+  }
+
+  if (state.mode === "village") {
+    const buildKeys = ["1", "2", "3", "4"];
+    buildKeys.forEach((k, i) => {
+      if (keysJust.has(k)) state.buildTool = Object.keys(BUILDINGS)[i];
+    });
+  }
+
+  if (state.mode === "home") {
+    const decorKeys = ["1", "2", "3", "4", "5"];
+    decorKeys.forEach((k, i) => {
+      if (keysJust.has(k)) state.decorTool = Object.keys(DECOR)[i];
+    });
+  }
+
+  keysJust.clear();
 }
 
-// ---- The game loop: update + draw, over and over -----------------------
-function loop() {
-  update();
-  draw();
-  requestAnimationFrame(loop);
+function tickLogic() {
+  if (state.mode !== "battle") handleInput();
+  if (state.mode === "overworld") {
+    updateWildDragons();
+    checkWildDragonTouch();
+  }
+  if (state.encounterCooldown > 0) state.encounterCooldown--;
+  updateHud();
 }
-loop();
-</script>
+
+window.addEventListener("keydown", (e) => {
+  const k = e.key.toLowerCase();
+  if (!keys[k]) keysJust.add(k);
+  keys[k] = true;
+});
+window.addEventListener("keyup", (e) => {
+  keys[e.key.toLowerCase()] = false;
+});
+
+[els.optSkin, els.optHair, els.optShirt, els.optPants, els.optHairstyle, els.optHat].forEach((el) => {
+  el?.addEventListener("input", readHeroFromCustomizeForm);
+  el?.addEventListener("change", readHeroFromCustomizeForm);
+});
+
+document.getElementById("start-customize-btn")?.addEventListener("click", openCustomizePanel);
+document.getElementById("customize-done")?.addEventListener("click", closeCustomizePanel);
+document.getElementById("inventory-done")?.addEventListener("click", closeInventory);
+
+function startGameSession() {
+  loadSave();
+  ensureStarterGear();
+  grantStarterWeapon();
+  resolvePlayerPosition();
+  saveGame();
+  els.startScreen.classList.add("hidden");
+  els.hud.classList.remove("hidden");
+  syncCustomizeFormFromHero();
+  const w = getEquippedWeapon();
+  showToast(
+    `Adventure begins! You got a free ${w?.emoji || "🗡️"} ${w?.name || "Dragon Dagger"}! Press I for weapons, C to customize.`,
+    4000
+  );
+  bindCanvasClickHandler();
+  window.GameCore?.onGameStart?.();
+}
+
+els.startBtn.addEventListener("click", startGameSession);
+
+window.GameCore = {
+  get wildOverworld() {
+    return wildOverworld;
+  },
+  state,
+  els,
+  keys,
+  keysJust,
+  worldMap,
+  TILE,
+  MAP_W,
+  MAP_H,
+  HOME_W,
+  HOME_H,
+  SPAWN_TILE,
+  DRAGONS,
+  WEAPONS,
+  tickLogic,
+  handleInput,
+  tileAt,
+  isBlocked,
+  resolvePlayerPosition,
+  clampPlayerToMap,
+  saveGame,
+  loadSave,
+  showToast,
+  drawDragonSprite,
+  drawDragonSpriteWithPet,
+  drawHeroPreviewCanvas,
+  syncCustomizeFormFromHero,
+  readHeroFromCustomizeForm,
+  openCustomizePanel,
+  closeCustomizePanel,
+  openInventory,
+  closeInventory,
+  startGameSession,
+  bindCanvasClickHandler,
+  onGameStart: null,
+  onBattleStart: null,
+  onBattleEnd: null,
+  onHeroChanged: null,
+};
+
+syncCustomizeFormFromHero();
+loadSave();
+ensureStarterGear();
+resolvePlayerPosition();
+  </script>
+
+  <script>
+/* ============================================================
+   GAME 3D — Three.js cel-shaded world renderer
+   ============================================================ */
+/**
+ * Dragon Tamer — 3D anime-style world (Pokémon-inspired cel shading)
+ */
+(function () {
+  const GC = () => window.GameCore;
+  const UNIT = 2.5;
+
+  const TILE_STYLE = {
+    0: { top: 0x6ecf4a, side: 0x4a9e34 },
+    1: { top: 0xe8c170, side: 0xc49a52 },
+    2: { top: 0x4fc3f7, side: 0x2196c4, water: true },
+    3: { top: 0x2d6a4f, side: 0x1b4332 },
+    4: { top: 0x52b788, side: 0x2d6a4f },
+    5: { top: 0xc44d12, side: 0x8b4513 },
+    6: { top: 0xa7c957, side: 0x6a994e },
+    7: { top: 0xf72585, side: 0xb5179e },
+    8: { top: 0xadb5bd, side: 0x6c757d },
+  };
+
+  let scene, camera, renderer, clock;
+  let toonGradient;
+  let worldGroup, playerGroup, wildGroup, battleGroup, homeGroup;
+  let playerMesh, mountDragonMesh;
+  let wildMeshes = new Map();
+  let battleMeshes = { player: null, wild: null };
+  let cameraYaw = 0;
+  let container;
+
+  function pxToWorld(px) {
+    return (px / GC().TILE) * UNIT;
+  }
+
+  function worldToPx(w) {
+    return (w / UNIT) * GC().TILE;
+  }
+
+  function createGradientTexture() {
+    const c = document.createElement("canvas");
+    c.width = 4;
+    c.height = 64;
+    const g = c.getContext("2d");
+    const grad = g.createLinearGradient(0, 0, 0, 64);
+    grad.addColorStop(0, "#ffffff");
+    grad.addColorStop(0.45, "#f0f0f0");
+    grad.addColorStop(0.55, "#888888");
+    grad.addColorStop(1, "#222222");
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 4, 64);
+    const tex = new THREE.CanvasTexture(c);
+    tex.magFilter = THREE.NearestFilter;
+    return tex;
+  }
+
+  function hex(hexStr) {
+    return parseInt(hexStr.replace("#", ""), 16);
+  }
+
+  function toonMat(color, emissive = 0x000000) {
+    return new THREE.MeshToonMaterial({
+      color: typeof color === "string" ? hex(color) : color,
+      emissive,
+      gradientMap: toonGradient,
+    });
+  }
+
+  function buildWorld() {
+    const { worldMap, MAP_W, MAP_H } = GC();
+    worldGroup.clear();
+
+    for (let ty = 0; ty < MAP_H; ty++) {
+      for (let tx = 0; tx < MAP_W; tx++) {
+        const t = worldMap[ty][tx];
+        const style = TILE_STYLE[t] ?? TILE_STYLE[0];
+        const wx = tx * UNIT;
+        const wz = ty * UNIT;
+
+        const ground = new THREE.Mesh(
+          new THREE.BoxGeometry(UNIT * 0.98, 0.35, UNIT * 0.98),
+          toonMat(style.top)
+        );
+        ground.position.set(wx + UNIT / 2, 0.15, wz + UNIT / 2);
+        ground.receiveShadow = true;
+        worldGroup.add(ground);
+
+        if (t === 3) {
+          const tree = new THREE.Group();
+          const trunk = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.2, 0.28, 0.9, 6),
+            toonMat(0x5d4037)
+          );
+          trunk.position.y = 0.55;
+          tree.add(trunk);
+          const leaves = new THREE.Mesh(
+            new THREE.SphereGeometry(0.75, 8, 8),
+            toonMat(0x2d6a4f, 0x0a2e14)
+          );
+          leaves.position.y = 1.25;
+          leaves.scale.set(1, 1.15, 1);
+          tree.add(leaves);
+          tree.position.set(wx + UNIT / 2, 0, wz + UNIT / 2);
+          worldGroup.add(tree);
+        }
+
+        if (t === 4) {
+          for (let i = 0; i < 3; i++) {
+            const blade = new THREE.Mesh(
+              new THREE.ConeGeometry(0.12, 0.45, 4),
+              toonMat(0x95d5b2)
+            );
+            blade.position.set(
+              wx + 0.4 + i * 0.55,
+              0.35,
+              wz + 0.5 + (i % 2) * 0.4
+            );
+            worldGroup.add(blade);
+          }
+        }
+
+        if (t === 5) {
+          const house = new THREE.Group();
+          const base = new THREE.Mesh(
+            new THREE.BoxGeometry(UNIT * 0.85, UNIT * 0.55, UNIT * 0.85),
+            toonMat(0xd4a373)
+          );
+          base.position.y = UNIT * 0.3;
+          house.add(base);
+          const roof = new THREE.Mesh(
+            new THREE.ConeGeometry(UNIT * 0.65, UNIT * 0.45, 4),
+            toonMat(0xc44d12)
+          );
+          roof.position.y = UNIT * 0.75;
+          roof.rotation.y = Math.PI / 4;
+          house.add(roof);
+          house.position.set(wx + UNIT / 2, 0, wz + UNIT / 2);
+          worldGroup.add(house);
+        }
+
+        if (t === 2) {
+          const water = new THREE.Mesh(
+            new THREE.BoxGeometry(UNIT, 0.08, UNIT),
+            new THREE.MeshToonMaterial({
+              color: 0x48cae4,
+              transparent: true,
+              opacity: 0.85,
+              gradientMap: toonGradient,
+            })
+          );
+          water.position.set(wx + UNIT / 2, 0.05, wz + UNIT / 2);
+          worldGroup.add(water);
+        }
+
+        if (t === 7) {
+          const sign = new THREE.Mesh(
+            new THREE.BoxGeometry(0.15, 1.2, 0.15),
+            toonMat(0xf72585)
+          );
+          sign.position.set(wx + UNIT / 2, 0.6, wz + UNIT / 2);
+          worldGroup.add(sign);
+        }
+
+        if (t === 8) {
+          const shrine = new THREE.Mesh(
+            new THREE.BoxGeometry(UNIT * 0.7, 0.5, UNIT * 0.7),
+            toonMat(0xdee2e6)
+          );
+          shrine.position.set(wx + UNIT / 2, 0.35, wz + UNIT / 2);
+          worldGroup.add(shrine);
+        }
+      }
+    }
+
+    addClouds();
+  }
+
+  function addClouds() {
+    for (let i = 0; i < 14; i++) {
+      const cloud = new THREE.Group();
+      for (let j = 0; j < 4; j++) {
+        const puff = new THREE.Mesh(
+          new THREE.SphereGeometry(1.2 + Math.random(), 8, 8),
+          toonMat(0xffffff, 0x111111)
+        );
+        puff.position.set(j * 1.4 - 2, Math.random() * 0.3, Math.random() * 0.8);
+        cloud.add(puff);
+      }
+      cloud.position.set(
+        Math.random() * GC().MAP_W * UNIT,
+        22 + Math.random() * 8,
+        Math.random() * GC().MAP_H * UNIT
+      );
+      cloud.userData.drift = 0.02 + Math.random() * 0.03;
+      worldGroup.add(cloud);
+    }
+  }
+
+  function buildDragonMesh(speciesId, scale = 1) {
+    const d = GC().DRAGONS[speciesId];
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(
+      new THREE.SphereGeometry(0.55 * scale, 12, 10),
+      toonMat(hex(d.color))
+    );
+    body.scale.set(1.2, 0.9, 1);
+    body.position.y = 0.65 * scale;
+    g.add(body);
+
+    const head = new THREE.Mesh(
+      new THREE.SphereGeometry(0.38 * scale, 10, 8),
+      toonMat(hex(d.color))
+    );
+    head.position.set(0, 0.95 * scale, 0.35 * scale);
+    g.add(head);
+
+    const horn = new THREE.Mesh(
+      new THREE.ConeGeometry(0.12 * scale, 0.45 * scale, 4),
+      toonMat(hex(d.accent))
+    );
+    horn.position.set(0, 1.25 * scale, 0.55 * scale);
+    horn.rotation.x = -0.5;
+    g.add(horn);
+
+    const eyeL = new THREE.Mesh(
+      new THREE.SphereGeometry(0.09 * scale, 8, 8),
+      toonMat(0xffffff)
+    );
+    eyeL.position.set(-0.15 * scale, 1.02 * scale, 0.62 * scale);
+    g.add(eyeL);
+    const eyeR = eyeL.clone();
+    eyeR.position.x = 0.15 * scale;
+    g.add(eyeR);
+
+    const pupilL = new THREE.Mesh(
+      new THREE.SphereGeometry(0.04 * scale, 6, 6),
+      toonMat(0x111111)
+    );
+    pupilL.position.set(-0.15 * scale, 1.02 * scale, 0.68 * scale);
+    g.add(pupilL);
+    const pupilR = pupilL.clone();
+    pupilR.position.x = 0.15 * scale;
+    g.add(pupilR);
+
+    if (d.canFly) {
+      const wingGeo = new THREE.SphereGeometry(0.35 * scale, 6, 4);
+      const w1 = new THREE.Mesh(wingGeo, toonMat(0xe0fbfc));
+      w1.scale.set(1.4, 0.25, 0.8);
+      w1.position.set(-0.55 * scale, 0.75 * scale, 0);
+      w1.rotation.z = 0.4;
+      g.add(w1);
+      const w2 = w1.clone();
+      w2.position.x = 0.55 * scale;
+      w2.rotation.z = -0.4;
+      g.add(w2);
+    }
+
+    const tail = new THREE.Mesh(
+      new THREE.ConeGeometry(0.18 * scale, 0.7 * scale, 5),
+      toonMat(hex(d.accent))
+    );
+    tail.position.set(0, 0.45 * scale, -0.55 * scale);
+    tail.rotation.x = 0.8;
+    g.add(tail);
+
+    return g;
+  }
+
+  function buildHeroMesh() {
+    const hero = GC().state.hero;
+    const g = new THREE.Group();
+
+    const pants = new THREE.Mesh(
+      new THREE.BoxGeometry(0.5, 0.45, 0.32),
+      toonMat(hex(hero.pants))
+    );
+    pants.position.y = 0.35;
+    g.add(pants);
+
+    const shirt = new THREE.Mesh(
+      new THREE.BoxGeometry(0.55, 0.38, 0.36),
+      toonMat(hex(hero.shirt))
+    );
+    shirt.position.y = 0.72;
+    g.add(shirt);
+
+    const head = new THREE.Mesh(
+      new THREE.SphereGeometry(0.32, 12, 10),
+      toonMat(hex(hero.skin))
+    );
+    head.position.y = 1.08;
+    g.add(head);
+
+    const hair = new THREE.Mesh(
+      new THREE.SphereGeometry(0.34, 10, 8),
+      toonMat(hex(hero.hair))
+    );
+    hair.position.y = 1.18;
+    hair.scale.y = hero.hairStyle === "long" ? 1.25 : 0.75;
+    g.add(hair);
+
+    if (hero.hat === "cap") {
+      const cap = new THREE.Mesh(
+        new THREE.BoxGeometry(0.5, 0.12, 0.5),
+        toonMat(0xe63946)
+      );
+      cap.position.y = 1.32;
+      g.add(cap);
+    } else if (hero.hat === "crown") {
+      const crown = new THREE.Mesh(
+        new THREE.BoxGeometry(0.42, 0.14, 0.42),
+        toonMat(0xffd700, 0x664400)
+      );
+      crown.position.y = 1.35;
+      g.add(crown);
+    }
+
+    const eyeGeo = new THREE.SphereGeometry(0.05, 6, 6);
+    const e1 = new THREE.Mesh(eyeGeo, toonMat(0x222222));
+    e1.position.set(-0.1, 1.1, 0.28);
+    g.add(e1);
+    const e2 = e1.clone();
+    e2.position.x = 0.1;
+    g.add(e2);
+
+    return g;
+  }
+
+  function updateHeroColors() {
+    playerGroup.clear();
+    playerMesh = buildHeroMesh();
+    playerGroup.add(playerMesh);
+    updateMountDragon();
+  }
+
+  function updateMountDragon() {
+    if (mountDragonMesh) {
+      playerGroup.remove(mountDragonMesh);
+      mountDragonMesh = null;
+    }
+    const st = GC().state;
+    if (!st.mounted && !st.flying) return;
+    const pet = st.party[st.activePet];
+    if (!pet) return;
+    mountDragonMesh = buildDragonMesh(pet.speciesId, 1.15);
+    mountDragonMesh.position.y = -0.15;
+    playerGroup.add(mountDragonMesh);
+    if (playerMesh) playerMesh.position.y = st.flying ? 1.8 : 1.1;
+  }
+
+  function syncPlayerPosition() {
+    const st = GC().state;
+    const wx = pxToWorld(st.player.x + st.player.w / 2);
+    const wz = pxToWorld(st.player.y + st.player.h / 2);
+    playerGroup.position.set(wx, st.flying ? 2.2 : 0, wz);
+
+    if (st.player.dir === "left") playerGroup.rotation.y = Math.PI / 2;
+    else if (st.player.dir === "right") playerGroup.rotation.y = -Math.PI / 2;
+    else if (st.player.dir === "up") playerGroup.rotation.y = Math.PI;
+    else playerGroup.rotation.y = 0;
+
+    updateMountDragon();
+  }
+
+  function syncWildDragons() {
+    const ids = new Set(GC().wildOverworld.map((d) => d.id));
+
+    for (const [id, entry] of wildMeshes) {
+      if (!ids.has(id)) {
+        wildGroup.remove(entry.mesh);
+        wildMeshes.delete(id);
+      }
+    }
+
+    GC().wildOverworld.forEach((d) => {
+      let entry = wildMeshes.get(d.id);
+      if (!entry) {
+        const mesh = buildDragonMesh(d.speciesId, 0.85);
+        wildGroup.add(mesh);
+        entry = { mesh, label: null };
+        wildMeshes.set(d.id, entry);
+      }
+      const wx = pxToWorld(d.x + d.w / 2);
+      const wz = pxToWorld(d.y + d.h / 2);
+      const bob = Math.sin(d.bob) * 0.15;
+      entry.mesh.position.set(wx, bob, wz);
+      entry.mesh.rotation.y += 0.005;
+    });
+  }
+
+  function updateCamera() {
+    const st = GC().state;
+    if (st.mode === "battle") return;
+
+    const target = playerGroup.position.clone();
+    if (st.mode === "home") {
+      target.set(GC().HOME_W * UNIT * 0.35, 0, GC().HOME_H * UNIT * 0.35);
+    }
+
+    const dist = st.flying ? 14 : 10;
+    const height = st.flying ? 8 : 6;
+    const ox = Math.sin(cameraYaw) * dist;
+    const oz = Math.cos(cameraYaw) * dist;
+
+    camera.position.lerp(
+      new THREE.Vector3(target.x + ox, target.y + height, target.z + oz),
+      0.08
+    );
+    camera.lookAt(target.x, target.y + 1.2, target.z);
+  }
+
+  function buildBattleArena() {
+    battleGroup.clear();
+    const floor = new THREE.Mesh(
+      new THREE.CircleGeometry(12, 32),
+      toonMat(0x52b788)
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = 0.01;
+    battleGroup.add(floor);
+
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(11.5, 12.5, 48),
+      toonMat(0xffd166)
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.02;
+    battleGroup.add(ring);
+  }
+
+  function showBattleScene() {
+    worldGroup.visible = false;
+    wildGroup.visible = false;
+    playerGroup.visible = false;
+    homeGroup.visible = false;
+    battleGroup.visible = true;
+
+    const st = GC().state;
+    const active = st.party[st.activePet];
+
+    if (battleMeshes.player) battleGroup.remove(battleMeshes.player);
+    if (battleMeshes.wild) battleGroup.remove(battleMeshes.wild);
+
+    battleMeshes.player = buildDragonMesh(active.speciesId, 1.4);
+    battleMeshes.player.position.set(-3.5, 0, 0);
+    battleMeshes.player.rotation.y = Math.PI / 2;
+    battleGroup.add(battleMeshes.player);
+
+    battleMeshes.wild = buildDragonMesh(st.wild.speciesId, 1.5);
+    battleMeshes.wild.position.set(3.5, 0, 0);
+    battleMeshes.wild.rotation.y = -Math.PI / 2;
+    battleGroup.add(battleMeshes.wild);
+
+    camera.position.set(0, 5, 12);
+    camera.lookAt(0, 1, 0);
+  }
+
+  function hideBattleScene() {
+    battleGroup.visible = false;
+    worldGroup.visible = true;
+    wildGroup.visible = true;
+    playerGroup.visible = true;
+    updateSceneMode();
+  }
+
+  function buildHomeScene() {
+    homeGroup.clear();
+    const floor = new THREE.Mesh(
+      new THREE.BoxGeometry(GC().HOME_W * UNIT, 0.2, GC().HOME_H * UNIT),
+      toonMat(0x6b5344)
+    );
+    floor.position.set((GC().HOME_W * UNIT) / 2, 0.1, (GC().HOME_H * UNIT) / 2);
+    homeGroup.add(floor);
+  }
+
+  function updateSceneMode() {
+    const mode = GC().state.mode;
+    worldGroup.visible = mode === "overworld";
+    wildGroup.visible = mode === "overworld";
+    playerGroup.visible = mode === "overworld" || mode === "home";
+    homeGroup.visible = mode === "home";
+    battleGroup.visible = mode === "battle";
+
+    if (mode === "home") {
+      syncPlayerPosition();
+    }
+  }
+
+  function initThree() {
+    container = document.getElementById("game-view");
+    if (!container) return;
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
+    scene.fog = new THREE.Fog(0x87ceeb, 40, 120);
+
+    camera = new THREE.PerspectiveCamera(50, 16 / 9, 0.1, 250);
+    clock = new THREE.Clock();
+    toonGradient = createGradientTexture();
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(960, 540);
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+    renderer.domElement.id = "game";
+    renderer.domElement.tabIndex = 0;
+
+    const hemi = new THREE.HemisphereLight(0xfff5e6, 0x4a7c59, 1.1);
+    scene.add(hemi);
+    const sun = new THREE.DirectionalLight(0xffffff, 1.4);
+    sun.position.set(30, 50, 20);
+    sun.castShadow = true;
+    scene.add(sun);
+
+    worldGroup = new THREE.Group();
+    wildGroup = new THREE.Group();
+    playerGroup = new THREE.Group();
+    battleGroup = new THREE.Group();
+    homeGroup = new THREE.Group();
+    battleGroup.visible = false;
+    homeGroup.visible = false;
+
+    scene.add(worldGroup);
+    scene.add(wildGroup);
+    scene.add(playerGroup);
+    scene.add(battleGroup);
+    scene.add(homeGroup);
+
+    buildWorld();
+    buildBattleArena();
+    buildHomeScene();
+    playerMesh = buildHeroMesh();
+    playerGroup.add(playerMesh);
+
+    window.addEventListener("resize", onResize);
+    renderer.domElement.addEventListener("click", () => renderer.domElement.focus());
+
+    const GCref = GC();
+    GCref.onGameStart = () => {
+      syncPlayerPosition();
+      syncWildDragons();
+      GCref.bindCanvasClickHandler();
+      renderer.domElement.focus();
+    };
+    GCref.onBattleStart = showBattleScene;
+    GCref.onBattleEnd = hideBattleScene;
+    GCref.onHeroChanged = updateHeroColors;
+
+    animate();
+  }
+
+  function onResize() {
+    const w = container.clientWidth || 960;
+    const h = Math.floor(w * (9 / 16));
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+  }
+
+  function isPlaying() {
+    return !GC().els.startScreen.classList.contains("hidden");
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+    const dt = clock.getDelta();
+
+    if (!isPlaying()) {
+      renderer.render(scene, camera);
+      return;
+    }
+
+    if (GC().state.mode !== "battle") {
+      GC().tickLogic();
+      syncPlayerPosition();
+      syncWildDragons();
+      updateSceneMode();
+
+      worldGroup.children.forEach((c) => {
+        if (c.userData.drift) c.position.x += c.userData.drift * dt * 10;
+      });
+
+      if (GC().keys["]"]) cameraYaw += 0.025;
+      if (GC().keys["["]) cameraYaw -= 0.025;
+    }
+
+    if (GC().state.mode === "battle" && battleMeshes.wild) {
+      battleMeshes.wild.position.y = Math.sin(clock.elapsedTime * 3) * 0.08;
+      battleMeshes.player.position.y = Math.sin(clock.elapsedTime * 2.5) * 0.06;
+    }
+
+    updateCamera();
+    renderer.render(scene, camera);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initThree);
+  } else {
+    initThree();
+  }
+})();
+  </script>
 </body>
 </html>
