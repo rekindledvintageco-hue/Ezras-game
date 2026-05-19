@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ezra's Coin Quest</title>
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: #1d1f2b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Trebuchet MS", Verdana, sans-serif;
+    color: #fff;
+  }
+  #wrap {
+    text-align: center;
+  }
+  canvas {
+    background: #87ceeb;
+    border: 6px solid #2b2d3c;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    max-width: 95vw;
+    height: auto;
+  }
+  #hint {
+    margin-top: 10px;
+    font-size: 14px;
+    opacity: 0.7;
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="900" height="500"></canvas>
+  <div id="hint">Move: &larr; &rarr; (or A / D) &nbsp;&bull;&nbsp; Jump: Space or &uarr; &nbsp;&bull;&nbsp; Restart: R</div>
+</div>
+
+<script>
+/* =======================================================================
+   EZRA'S COIN QUEST
+   A 2D game. Collect all the coins and avoid the grumpy blobs!
+
+   >>> WANT TO CHANGE THE GAME? Edit the numbers in SETTINGS below. <<<
+   Try making the player jump higher, run faster, or change the colors.
+   ======================================================================= */
+
+const SETTINGS = {
+  playerName:    "Ezra",     // your name shows up in the game!
+  playerColor:   "#ff5a5f",  // the color of the player
+  jumpStrength:  15,         // bigger number = higher jumps
+  moveSpeed:     5,          // bigger number = faster running
+  gravity:       0.6,        // bigger number = falls down faster
+  startingLives: 3,          // how many tries you get
+};
+
+// ---- Canvas setup ------------------------------------------------------
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const W = canvas.width;
+const H = canvas.height;
+
+// ---- Game state --------------------------------------------------------
+let state = "title";   // "title", "playing", "won", "lost"
+let score = 0;
+let lives = SETTINGS.startingLives;
+let sparkles = [];     // little bursts when you grab a coin
+
+// ---- The player --------------------------------------------------------
+const START_X = 40;
+const START_Y = 380;
+const player = {
+  x: START_X, y: START_Y,
+  w: 38, h: 44,
+  vx: 0, vy: 0,
+  onGround: false,
+  face: 1,            // 1 = looking right, -1 = looking left
+  invuln: 0,          // brief safety time after getting hit
+};
+
+// ---- The level ---------------------------------------------------------
+// Each platform is a box: { x, y, w, h }
+const platforms = [
+  { x: 0,   y: 460, w: 900, h: 40 },   // the ground
+  { x: 150, y: 360, w: 150, h: 20 },
+  { x: 390, y: 285, w: 150, h: 20 },
+  { x: 640, y: 355, w: 170, h: 20 },
+  { x: 300, y: 165, w: 130, h: 20 },
+];
+
+// Each coin is a spot to collect: { x, y, got }
+const coins = [
+  { x: 100, y: 410, got: false },
+  { x: 210, y: 320, got: false },
+  { x: 260, y: 320, got: false },
+  { x: 360, y: 120, got: false },
+  { x: 460, y: 240, got: false },
+  { x: 700, y: 310, got: false },
+  { x: 760, y: 310, got: false },
+  { x: 540, y: 410, got: false },
+  { x: 820, y: 410, got: false },
+  { x: 440, y: 410, got: false },
+];
+
+// Each enemy patrols back and forth between minX and maxX
+const enemies = [
+  { x: 600, y: 420, w: 40, h: 40, vx: 2,   minX: 480, maxX: 850 },
+  { x: 650, y: 315, w: 40, h: 40, vx: 1.6, minX: 640, maxX: 770 },
+];
+
+function resetEnemies() {
+  enemies[0].x = 600; enemies[0].vx = 2;
+  enemies[1].x = 650; enemies[1].vx = 1.6;
+}
+
+// ---- Keyboard input ----------------------------------------------------
+const keys = {};
+window.addEventListener("keydown", (e) => {
+  keys[e.key.toLowerCase()] = true;
+  if ([" ", "arrowup", "arrowleft", "arrowright"].includes(e.key.toLowerCase())) {
+    e.preventDefault();
+  }
+  if (state === "title" && (e.key === " " || e.key === "Enter")) startGame();
+  if ((state === "won" || state === "lost") && e.key.toLowerCase() === "r") startGame();
+});
+window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
+canvas.addEventListener("click", () => { if (state === "title") startGame(); });
+
+function startGame() {
+  state = "playing";
+  score = 0;
+  lives = SETTINGS.startingLives;
+  sparkles = [];
+  coins.forEach((c) => (c.got = false));
+  resetEnemies();
+  respawnPlayer();
+}
+
+function respawnPlayer() {
+  player.x = START_X;
+  player.y = START_Y;
+  player.vx = 0;
+  player.vy = 0;
+  player.invuln = 90;
+}
+
+// ---- Box overlap check (used for all collisions) -----------------------
+function overlap(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x &&
+         a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+// ---- Update: the game's thinking, runs every frame ---------------------
+function update() {
+  if (state !== "playing") return;
+
+  // Move left and right
+  if (keys["arrowleft"] || keys["a"]) { player.vx = -SETTINGS.moveSpeed; player.face = -1; }
+  else if (keys["arrowright"] || keys["d"]) { player.vx = SETTINGS.moveSpeed; player.face = 1; }
+  else { player.vx = 0; }
+
+  // Jump (only when standing on something)
+  if ((keys[" "] || keys["arrowup"] || keys["w"]) && player.onGround) {
+    player.vy = -SETTINGS.jumpStrength;
+    player.onGround = false;
+  }
+
+  // Gravity pulls the player down
+  player.vy += SETTINGS.gravity;
+
+  // Move sideways, then keep player inside the screen
+  player.x += player.vx;
+  if (player.x < 0) player.x = 0;
+  if (player.x + player.w > W) player.x = W - player.w;
+
+  // Move up/down, then land on platforms
+  player.y += player.vy;
+  player.onGround = false;
+  for (const p of platforms) {
+    if (overlap(player, p)) {
+      if (player.vy > 0 && player.y + player.h - player.vy <= p.y + 1) {
+        player.y = p.y - player.h;   // land on top
+        player.vy = 0;
+        player.onGround = true;
+      } else if (player.vy < 0 && player.y - player.vy >= p.y + p.h - 1) {
+        player.y = p.y + p.h;        // bonk head on bottom
+        player.vy = 0;
+      }
+    }
+  }
+
+  // Collect coins
+  for (const c of coins) {
+    if (!c.got) {
+      const cx = player.x + player.w / 2;
+      const cy = player.y + player.h / 2;
+      if (Math.hypot(cx - c.x, cy - c.y) < 34) {
+        c.got = true;
+        score += 10;
+        for (let i = 0; i < 12; i++) {
+          sparkles.push({
+            x: c.x, y: c.y,
+            vx: (Math.random() - 0.5) * 6,
+            vy: (Math.random() - 0.5) * 6,
+            life: 30,
+          });
+        }
+      }
+    }
+  }
+
+  // Move the enemies back and forth
+  for (const e of enemies) {
+    e.x += e.vx;
+    if (e.x < e.minX || e.x + e.w > e.maxX) e.vx *= -1;
+  }
+
+  // Did an enemy touch the player?
+  if (player.invuln > 0) player.invuln--;
+  else {
+    for (const e of enemies) {
+      if (overlap(player, e)) {
+        lives--;
+        if (lives <= 0) { state = "lost"; }
+        else { respawnPlayer(); }
+        break;
+      }
+    }
+  }
+
+  // Update the sparkle bursts
+  sparkles.forEach((s) => { s.x += s.vx; s.y += s.vy; s.life--; });
+  sparkles = sparkles.filter((s) => s.life > 0);
+
+  // Win when every coin is collected
+  if (coins.every((c) => c.got)) state = "won";
+}
+
+// ---- Drawing helpers ---------------------------------------------------
+function drawBackground() {
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, "#6ec6ff");
+  sky.addColorStop(1, "#bfe9ff");
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+
+  // sun
+  ctx.fillStyle = "#fff27a";
+  ctx.beginPath();
+  ctx.arc(800, 80, 45, 0, Math.PI * 2);
+  ctx.fill();
+
+  // clouds
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  cloud(160, 90); cloud(420, 60); cloud(620, 120);
+}
+function cloud(x, y) {
+  ctx.beginPath();
+  ctx.arc(x, y, 24, 0, Math.PI * 2);
+  ctx.arc(x + 26, y + 6, 30, 0, Math.PI * 2);
+  ctx.arc(x + 58, y, 22, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawPlatforms() {
+  for (const p of platforms) {
+    ctx.fillStyle = "#7a4b28";          // dirt
+    ctx.fillRect(p.x, p.y, p.w, p.h);
+    ctx.fillStyle = "#4caf50";          // grass on top
+    ctx.fillRect(p.x, p.y, p.w, 8);
+  }
+}
+
+function drawCoins() {
+  for (const c of coins) {
+    if (c.got) continue;
+    const wobble = Math.sin(Date.now() / 200 + c.x) * 4;
+    ctx.fillStyle = "#ffcc00";
+    ctx.strokeStyle = "#e0a800";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(c.x, c.y + wobble, 13, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#fff3b0";
+    ctx.beginPath();
+    ctx.arc(c.x - 4, c.y + wobble - 4, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawEnemies() {
+  for (const e of enemies) {
+    ctx.fillStyle = "#8e44ad";
+    roundRect(e.x, e.y, e.w, e.h, 10);
+    ctx.fill();
+    // grumpy eyes
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.arc(e.x + 12, e.y + 16, 6, 0, Math.PI * 2);
+    ctx.arc(e.x + 28, e.y + 16, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.arc(e.x + 12, e.y + 17, 3, 0, Math.PI * 2);
+    ctx.arc(e.x + 28, e.y + 17, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawPlayer() {
+  // blink while invulnerable
+  if (player.invuln > 0 && Math.floor(player.invuln / 6) % 2 === 0) return;
+
+  ctx.fillStyle = SETTINGS.playerColor;
+  roundRect(player.x, player.y, player.w, player.h, 10);
+  ctx.fill();
+
+  // eyes (look the way the player is moving)
+  const eyeX = player.x + player.w / 2 + player.face * 5;
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  ctx.arc(eyeX - 8, player.y + 16, 7, 0, Math.PI * 2);
+  ctx.arc(eyeX + 8, player.y + 16, 7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#000";
+  ctx.beginPath();
+  ctx.arc(eyeX - 8 + player.face * 2, player.y + 16, 3.5, 0, Math.PI * 2);
+  ctx.arc(eyeX + 8 + player.face * 2, player.y + 16, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // smile
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(player.x + player.w / 2, player.y + 28, 7, 0, Math.PI);
+  ctx.stroke();
+}
+
+function drawSparkles() {
+  for (const s of sparkles) {
+    ctx.globalAlpha = s.life / 30;
+    ctx.fillStyle = "#fff27a";
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawHUD() {
+  ctx.fillStyle = "#000";
+  ctx.font = "bold 22px Trebuchet MS";
+  ctx.textAlign = "left";
+  ctx.fillText("Score: " + score, 16, 32);
+
+  // hearts for lives
+  for (let i = 0; i < lives; i++) heart(W - 32 - i * 34, 22);
+}
+function heart(x, y) {
+  ctx.fillStyle = "#ff3b5c";
+  ctx.beginPath();
+  ctx.moveTo(x, y + 6);
+  ctx.bezierCurveTo(x, y, x - 11, y, x - 11, y + 7);
+  ctx.bezierCurveTo(x - 11, y + 14, x, y + 18, x, y + 22);
+  ctx.bezierCurveTo(x, y + 18, x + 11, y + 14, x + 11, y + 7);
+  ctx.bezierCurveTo(x + 11, y, x, y, x, y + 6);
+  ctx.fill();
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function centerText(big, small, color) {
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = "center";
+  ctx.fillStyle = color;
+  ctx.font = "bold 56px Trebuchet MS";
+  ctx.fillText(big, W / 2, H / 2 - 10);
+  ctx.fillStyle = "#fff";
+  ctx.font = "22px Trebuchet MS";
+  ctx.fillText(small, W / 2, H / 2 + 40);
+}
+
+// ---- Draw: paints everything on the screen -----------------------------
+function draw() {
+  drawBackground();
+  drawPlatforms();
+  drawCoins();
+  drawEnemies();
+  drawSparkles();
+  drawPlayer();
+  drawHUD();
+
+  if (state === "title") {
+    centerText("EZRA'S COIN QUEST", "Press SPACE or click to start", "#ffcc00");
+  } else if (state === "won") {
+    centerText("YOU WIN, " + SETTINGS.playerName.toUpperCase() + "!",
+               "Score: " + score + "  -  Press R to play again", "#7CFC00");
+  } else if (state === "lost") {
+    centerText("GAME OVER", "Press R to try again", "#ff5a5f");
+  }
+}
+
+// ---- The game loop: update + draw, over and over -----------------------
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
