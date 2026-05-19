@@ -2219,8 +2219,7 @@ function handleInput() {
       state.mode = "village";
       showToast("Village mode! 1–4 buildings, H hammer, click. V to exit.");
     } else showToast("Walk to the village clearing on the far east!");
-  }
-  if (keysJust.has("v") && state.mode === "village") {
+  } else if (keysJust.has("v") && state.mode === "village") {
     state.mode = "overworld";
     showToast("Left village builder.");
   }
