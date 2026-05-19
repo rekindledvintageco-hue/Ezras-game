@@ -539,7 +539,9 @@ kbd {
         </div>
       </div>
       <ul>
-        <li>🐲 Walk up to <strong>wild dragons</strong> roaming the world!</li>
+        <li>🐲 Walk up to <strong>wild dragons</strong> roaming the world — 8 species!</li>
+        <li>✈️ Tame <strong>Thunderwing</strong> or <strong>Rainbow Drake</strong> to fly!</li>
+        <li>🪵 Press <kbd>T</kbd> near trees to chop wood → build cabins in the village!</li>
         <li>🏠 Press <kbd>E</kbd> at your house · <kbd>V</kbd> village · <kbd>F</kbd> fly</li>
         <li>⚡ Powers, pets, and weapons in battle</li>
       </ul>
@@ -586,21 +588,25 @@ const VILLAGE_W = 16;
 const VILLAGE_H = 12;
 
 const DRAGONS = {
-  ember: { id: "ember", name: "Ember Drake", type: "fire", color: "#e85d04", accent: "#ffba08", hp: 35, atk: 12, canFly: false, canRide: true, powerId: "inferno" },
-  frost: { id: "frost", name: "Frost Whelp", type: "ice", color: "#48cae4", accent: "#caf0f8", hp: 40, atk: 10, canFly: false, canRide: true, powerId: "blizzard" },
-  leaf: { id: "leaf", name: "Leaf Serpent", type: "nature", color: "#2d6a4f", accent: "#95d5b2", hp: 42, atk: 9, canFly: false, canRide: true, powerId: "vineHeal" },
-  storm: { id: "storm", name: "Storm Raptor", type: "storm", color: "#7b2cbf", accent: "#e0aaff", hp: 32, atk: 14, canFly: false, canRide: true, powerId: "thunder" },
-  sky: { id: "sky", name: "Sky Wyrm", type: "sky", color: "#4cc9f0", accent: "#fff", hp: 38, atk: 11, canFly: true, canRide: true, powerId: "gale" },
-  shadow: { id: "shadow", name: "Shadow Fang", type: "dark", color: "#3d348b", accent: "#9d4edd", hp: 36, atk: 13, canFly: false, canRide: true, powerId: "nightPulse" },
+  ember:      { id: "ember",      name: "Ember Drake",    type: "fire",   color: "#e85d04", accent: "#ffba08", hp: 35, atk: 12, canFly: false, canRide: true,  powerId: "inferno" },
+  frost:      { id: "frost",      name: "Frost Whelp",    type: "ice",    color: "#48cae4", accent: "#caf0f8", hp: 40, atk: 10, canFly: false, canRide: true,  powerId: "blizzard" },
+  leaf:       { id: "leaf",       name: "Leaf Serpent",   type: "nature", color: "#2d6a4f", accent: "#95d5b2", hp: 42, atk: 9,  canFly: false, canRide: true,  powerId: "vineHeal" },
+  storm:      { id: "storm",      name: "Storm Raptor",   type: "storm",  color: "#7b2cbf", accent: "#e0aaff", hp: 32, atk: 14, canFly: false, canRide: true,  powerId: "thunder" },
+  sky:        { id: "sky",        name: "Sky Wyrm",       type: "sky",    color: "#4cc9f0", accent: "#ffffff", hp: 38, atk: 11, canFly: true,  canRide: true,  powerId: "gale" },
+  shadow:     { id: "shadow",     name: "Shadow Fang",    type: "dark",   color: "#3d348b", accent: "#9d4edd", hp: 36, atk: 13, canFly: false, canRide: true,  powerId: "nightPulse" },
+  thunderWing:{ id: "thunderWing",name: "Thunderwing",    type: "storm",  color: "#f4d03f", accent: "#9b59b6", hp: 34, atk: 14, canFly: true,  canRide: true,  powerId: "boltDive" },
+  rainbow:    { id: "rainbow",    name: "Rainbow Drake",  type: "sky",    color: "#ff6b9d", accent: "#00d4ff", hp: 36, atk: 10, canFly: true,  canRide: true,  powerId: "prismBeam" },
 };
 
 const POWERS = {
-  inferno: { id: "inferno", name: "Inferno Blast", desc: "Roaring flames!", mult: 1.85, effect: "damage" },
-  blizzard: { id: "blizzard", name: "Blizzard Shard", desc: "Ice shards — may freeze!", mult: 1.55, effect: "damage", status: "freeze", statusChance: 0.28 },
-  vineHeal: { id: "vineHeal", name: "Vine Renewal", desc: "Heals your dragon.", mult: 0, effect: "heal", healRatio: 0.35 },
-  thunder: { id: "thunder", name: "Thunder Strike", desc: "Huge bolt — small recoil.", mult: 2.0, effect: "damage", recoil: 0.12 },
-  gale: { id: "gale", name: "Gale Force", desc: "Wind pierces defenses.", mult: 1.65, effect: "damage", pierce: true },
-  nightPulse: { id: "nightPulse", name: "Night Pulse", desc: "Drains life from foe.", mult: 1.6, effect: "drain", drainRatio: 0.4 },
+  inferno:   { id: "inferno",   name: "Inferno Blast",  desc: "Roaring flames!", mult: 1.85, effect: "damage" },
+  blizzard:  { id: "blizzard",  name: "Blizzard Shard", desc: "Ice shards — may freeze!", mult: 1.55, effect: "damage", status: "freeze", statusChance: 0.28 },
+  vineHeal:  { id: "vineHeal",  name: "Vine Renewal",   desc: "Heals your dragon.", mult: 0, effect: "heal", healRatio: 0.35 },
+  thunder:   { id: "thunder",   name: "Thunder Strike", desc: "Huge bolt — small recoil.", mult: 2.0, effect: "damage", recoil: 0.12 },
+  gale:      { id: "gale",      name: "Gale Force",     desc: "Wind pierces defenses.", mult: 1.65, effect: "damage", pierce: true },
+  nightPulse:{ id: "nightPulse",name: "Night Pulse",    desc: "Drains life from foe.", mult: 1.6, effect: "drain", drainRatio: 0.4 },
+  boltDive:  { id: "boltDive",  name: "Bolt Dive",      desc: "Thunderwing swoops with lightning!", mult: 1.9, effect: "damage" },
+  prismBeam: { id: "prismBeam", name: "Prism Beam",     desc: "Dazzling rainbow blast!", mult: 1.7, effect: "damage" },
 };
 
 const MINI_PETS = {
@@ -613,12 +619,14 @@ const MINI_PETS = {
 };
 
 const DRAGON_PET_AFFINITY = {
-  ember: "sparkMouse",
-  frost: "snowBunny",
-  leaf: "mossFrog",
-  storm: "buzzBeetle",
-  sky: "cloudMoth",
-  shadow: "shadeBat",
+  ember:       "sparkMouse",
+  frost:       "snowBunny",
+  leaf:        "mossFrog",
+  storm:       "buzzBeetle",
+  sky:         "cloudMoth",
+  shadow:      "shadeBat",
+  thunderWing: "buzzBeetle",
+  rainbow:     "cloudMoth",
 };
 
 const MINI_PET_POOL = Object.keys(MINI_PETS);
@@ -716,7 +724,7 @@ const DEFAULT_HERO = {
   hat: "none",
 };
 
-const WILD_POOL = ["ember", "frost", "leaf", "storm", "sky", "shadow"];
+const WILD_POOL = ["ember", "frost", "leaf", "storm", "sky", "shadow", "thunderWing", "rainbow"];
 
 const CABINS = {
   small: { id: "small", name: "Small Cabin", woodCost: 50 },
@@ -2591,7 +2599,7 @@ resolvePlayerPosition();
   let scene, camera, renderer, clock;
   let toonGradient;
   let worldGroup, playerGroup, wildGroup, battleGroup, homeGroup, cabinGroup;
-  let playerMesh, mountDragonMesh;
+  let playerMesh, mountDragonMesh, mountPetMesh;
   let wildMeshes = new Map();
   let treeMeshes = new Map();
   let battleMeshes = { player: null, wild: null };
@@ -2880,9 +2888,10 @@ resolvePlayerPosition();
   function buildDragonMesh(speciesId, scale = 1) {
     const d = GC().DRAGONS[speciesId];
     const g = new THREE.Group();
+    const glowEmissive = speciesId === "thunderWing" ? 0x443300 : speciesId === "rainbow" ? 0x220033 : 0x000000;
     const body = new THREE.Mesh(
       new THREE.SphereGeometry(0.55 * scale, 12, 10),
-      toonMat(hex(d.color))
+      toonMat(hex(d.color), glowEmissive)
     );
     body.scale.set(1.2, 0.9, 1);
     body.position.y = 0.65 * scale;
@@ -2944,6 +2953,34 @@ resolvePlayerPosition();
     tail.rotation.x = 0.8;
     g.add(tail);
 
+    return g;
+  }
+
+  function buildMiniPetMesh(miniPet) {
+    const g = new THREE.Group();
+    const petColor = miniPet?.color ? hex(miniPet.color) : 0xff6b35;
+    const body = new THREE.Mesh(
+      new THREE.SphereGeometry(0.22, 8, 8),
+      toonMat(petColor)
+    );
+    body.position.y = 0.22;
+    g.add(body);
+    const earGeo = new THREE.ConeGeometry(0.08, 0.18, 4);
+    const earL = new THREE.Mesh(earGeo, toonMat(petColor));
+    earL.position.set(-0.13, 0.38, 0);
+    earL.rotation.z = -0.35;
+    g.add(earL);
+    const earR = earL.clone();
+    earR.position.x = 0.13;
+    earR.rotation.z = 0.35;
+    g.add(earR);
+    const eyeGeo = new THREE.SphereGeometry(0.045, 6, 6);
+    const e1 = new THREE.Mesh(eyeGeo, toonMat(0x111111));
+    e1.position.set(-0.09, 0.26, 0.19);
+    g.add(e1);
+    const e2 = e1.clone();
+    e2.position.x = 0.09;
+    g.add(e2);
     return g;
   }
 
@@ -3015,18 +3052,27 @@ resolvePlayerPosition();
   }
 
   function updateMountDragon() {
-    if (mountDragonMesh) {
-      playerGroup.remove(mountDragonMesh);
-      mountDragonMesh = null;
-    }
+    if (mountDragonMesh) { playerGroup.remove(mountDragonMesh); mountDragonMesh = null; }
+    if (mountPetMesh)    { playerGroup.remove(mountPetMesh);    mountPetMesh = null; }
     const st = GC().state;
-    if (!st.mounted && !st.flying) return;
+    if (!st.mounted && !st.flying) {
+      if (playerMesh) playerMesh.position.y = 0;
+      return;
+    }
     const pet = st.party[st.activePet];
     if (!pet) return;
     mountDragonMesh = buildDragonMesh(pet.speciesId, 1.15);
     mountDragonMesh.position.y = -0.15;
     playerGroup.add(mountDragonMesh);
     if (playerMesh) playerMesh.position.y = st.flying ? 1.8 : 1.1;
+
+    // Mini-pet floats beside the dragon when riding/flying
+    if (pet.miniPet) {
+      mountPetMesh = buildMiniPetMesh(pet.miniPet);
+      mountPetMesh.position.set(1.3, st.flying ? 1.4 : 0.6, 0.2);
+      mountPetMesh.scale.setScalar(1.1);
+      playerGroup.add(mountPetMesh);
+    }
   }
 
   function syncPlayerPosition() {
@@ -3282,6 +3328,13 @@ resolvePlayerPosition();
     if (GC().state.mode === "battle" && battleMeshes.wild) {
       battleMeshes.wild.position.y = Math.sin(clock.elapsedTime * 3) * 0.08;
       battleMeshes.player.position.y = Math.sin(clock.elapsedTime * 2.5) * 0.06;
+    }
+
+    // Mini-pet bobs beside dragon while riding/flying
+    if (mountPetMesh) {
+      const st = GC().state;
+      mountPetMesh.position.y = (st.flying ? 1.4 : 0.6) + Math.sin(clock.elapsedTime * 4) * 0.12;
+      mountPetMesh.rotation.y += 0.03;
     }
 
     updateCamera();
