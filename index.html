@@ -883,6 +883,14 @@ function normalizeDragon(d) {
   const base = DRAGONS[d.speciesId] || DRAGONS.ember;
   d.powerId = d.powerId || base.powerId;
   d.maxHp = d.maxHp || d.hp;
+  // Refresh species-level constants from the current DRAGONS table so old
+  // saves pick up new abilities (e.g., canFly being enabled on every species).
+  d.canFly  = base.canFly;
+  d.canRide = base.canRide;
+  d.type    = base.type;
+  d.color   = base.color;
+  d.accent  = base.accent;
+  d.name    = d.name || base.name;
   if (d.miniPet && typeof d.miniPet === "string") d.miniPet = makeMiniPet(d.miniPet);
   if (d.miniPet?.petId) d.miniPet = makeMiniPet(d.miniPet.petId);
   return d;
