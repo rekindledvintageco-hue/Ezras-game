@@ -839,6 +839,7 @@ const state = {
   wood: 0,
   cabinInterior: null,    // null | "small" | "big" | "upstairs" (current floor/type when in cabin mode)
   currentCabin: null,     // {type,tx,ty} of the cabin we're inside (so we can exit back to it)
+  cabinStairsCooldown: 0, // frames before stairs can re-trigger (prevents bounce loop)
   outfit: null,           // currently equipped outfit id
   outfitBag: [],          // outfit ids owned
   homeDecor: [],
@@ -2358,7 +2359,7 @@ function nearTile(target, maxDist = 2) {
 }
 
 function nearVillager() { return nearTile(villagerTile(), 1); }
-function nearCabinStairs() { return nearTile(stairsTile(), 1); }
+function nearCabinStairs() { return nearTile(stairsTile(), 2); }
 function nearCabinExit() {
   const d = exitDoorTile();
   if (!d) return false;
@@ -2382,24 +2383,24 @@ function enterCabin(cabin) {
 
 function goUpstairs() {
   state.cabinInterior = "upstairs";
-  const dims = cabinInteriorDims();
-  // Spawn near top of stairs
-  state.player.x = (dims.w - 4) * TILE + 4;
-  state.player.y = 6 * TILE + 4;
+  // Spawn at center of upstairs, well away from the staircase
+  state.player.x = 6 * TILE + 4;
+  state.player.y = 3 * TILE + 4;
   state.player.dir = "down";
+  state.cabinStairsCooldown = 35;
   window.GameCore?.onCabinEnter?.();
-  showToast("Upstairs! 🏠 Walk near stairs and press E to go back down.");
+  showToast("🏠 Upstairs! Walk around to see your trophies. Step on the stairs to go back down.", 4000);
 }
 
 function goDownstairs() {
   state.cabinInterior = "big";
-  const dims = cabinInteriorDims();
-  // Spawn near stairs on ground floor
-  state.player.x = 11 * TILE + 4;
-  state.player.y = 3 * TILE + 4;
-  state.player.dir = "down";
+  // Spawn at center of big cabin (south of stairs, away from villager corner)
+  state.player.x = 8 * TILE + 4;
+  state.player.y = 7 * TILE + 4;
+  state.player.dir = "up";
+  state.cabinStairsCooldown = 35;
   window.GameCore?.onCabinEnter?.();
-  showToast("Back downstairs!");
+  showToast("Back downstairs! Step on the stairs again to go up.", 3000);
 }
 
 function exitCabin() {
@@ -2570,6 +2571,12 @@ function handleInput() {
     const maxY = dims.h * TILE - state.player.h - 6;
     state.player.x = Math.max(TILE + 4, Math.min(maxX, nx));
     state.player.y = Math.max(TILE + 4, Math.min(maxY, ny));
+    // Auto-trigger stairs when player steps onto them
+    if (state.cabinStairsCooldown > 0) state.cabinStairsCooldown--;
+    else if ((dx || dy) && nearCabinStairs()) {
+      if (state.cabinInterior === "big") goUpstairs();
+      else if (state.cabinInterior === "upstairs") goDownstairs();
+    }
   }
 
   if (keysJust.has("e")) {
@@ -3584,10 +3591,14 @@ resolvePlayerPosition();
           s.position.set(stairsT.tx * UNIT + UNIT / 2, (0.3 + step * 0.4) / 2, stairsT.ty * UNIT + step * UNIT * 0.5 + UNIT * 0.25);
           cabinInteriorGroup.add(s);
         }
-        // Sign that says "UP"
-        const sign = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.4, 0.05), toonMat(0xffd166, 0x664400));
-        sign.position.set(stairsT.tx * UNIT + UNIT / 2, 2.3, stairsT.ty * UNIT + UNIT * 0.5);
-        cabinInteriorGroup.add(sign);
+        // Glowing "UP" arrow above the stairs (animated)
+        const upArrow = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.7, 4), toonMat(0xffd700, 0x886600));
+        upArrow.position.set(stairsT.tx * UNIT + UNIT / 2, 3.2, stairsT.ty * UNIT + UNIT * 0.5);
+        upArrow.userData.isStairsMarker = true;
+        cabinInteriorGroup.add(upArrow);
+        const upBase = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.08), toonMat(0xffd166, 0x664400));
+        upBase.position.set(stairsT.tx * UNIT + UNIT / 2, 2.4, stairsT.ty * UNIT + UNIT * 0.5);
+        cabinInteriorGroup.add(upBase);
       }
 
       // Small chair in corner
@@ -3606,9 +3617,15 @@ resolvePlayerPosition();
         s.position.set(stairsT.tx * UNIT + UNIT / 2, (0.3 + (3 - step) * 0.4) / 2, stairsT.ty * UNIT + step * UNIT * 0.5 + UNIT * 0.25);
         cabinInteriorGroup.add(s);
       }
-      const sign = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.4, 0.05), toonMat(0xffd166, 0x664400));
-      sign.position.set(stairsT.tx * UNIT + UNIT / 2, 2.3, stairsT.ty * UNIT + UNIT * 0.5);
-      cabinInteriorGroup.add(sign);
+      // Glowing "DOWN" arrow above the stairs upstairs (animated)
+      const downArrow = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.7, 4), toonMat(0xffd700, 0x886600));
+      downArrow.rotation.x = Math.PI;
+      downArrow.position.set(stairsT.tx * UNIT + UNIT / 2, 3.2, stairsT.ty * UNIT + UNIT * 0.5);
+      downArrow.userData.isStairsMarker = true;
+      cabinInteriorGroup.add(downArrow);
+      const downBase = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.08), toonMat(0xffd166, 0x664400));
+      downBase.position.set(stairsT.tx * UNIT + UNIT / 2, 2.4, stairsT.ty * UNIT + UNIT * 0.5);
+      cabinInteriorGroup.add(downBase);
 
       // Trophies — only those unlocked by dragon count
       const dragonCount = st.party.length;
@@ -3774,12 +3791,16 @@ resolvePlayerPosition();
       mountPetMesh.rotation.y += 0.03;
     }
 
-    // Villager sparkle floats in cabin
+    // Villager sparkle + stairs arrow float/spin in cabin
     if (GC().state.mode === "cabin") {
       cabinInteriorGroup.children.forEach((c) => {
         if (c.userData.isSparkle) {
           c.position.y = 2.6 + Math.sin(clock.elapsedTime * 3) * 0.15;
           c.rotation.y += 0.05;
+        }
+        if (c.userData.isStairsMarker) {
+          c.position.y = 3.2 + Math.sin(clock.elapsedTime * 4) * 0.2;
+          c.rotation.y += 0.06;
         }
       });
     }
