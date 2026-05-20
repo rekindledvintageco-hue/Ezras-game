@@ -540,7 +540,7 @@ kbd {
       </div>
       <ul>
         <li>🐲 Walk up to <strong>wild dragons</strong> roaming the world — 8 species!</li>
-        <li>✈️ Tame <strong>Thunderwing</strong> or <strong>Rainbow Drake</strong> to fly!</li>
+        <li>✈️ Every dragon can fly — tame one and press <kbd>F</kbd> to soar!</li>
         <li>🪵 Press <kbd>T</kbd> near trees to chop wood → build cabins in the village!</li>
         <li>🏠 Press <kbd>E</kbd> at your house · <kbd>V</kbd> village · <kbd>F</kbd> fly</li>
         <li>⚡ Powers, pets, and weapons in battle</li>
@@ -593,12 +593,12 @@ const VILLAGE_W = 16;
 const VILLAGE_H = 12;
 
 const DRAGONS = {
-  ember:      { id: "ember",      name: "Ember Drake",    type: "fire",   color: "#e85d04", accent: "#ffba08", hp: 35, atk: 12, canFly: false, canRide: true,  powerId: "inferno" },
-  frost:      { id: "frost",      name: "Frost Whelp",    type: "ice",    color: "#48cae4", accent: "#caf0f8", hp: 40, atk: 10, canFly: false, canRide: true,  powerId: "blizzard" },
-  leaf:       { id: "leaf",       name: "Leaf Serpent",   type: "nature", color: "#2d6a4f", accent: "#95d5b2", hp: 42, atk: 9,  canFly: false, canRide: true,  powerId: "vineHeal" },
-  storm:      { id: "storm",      name: "Storm Raptor",   type: "storm",  color: "#7b2cbf", accent: "#e0aaff", hp: 32, atk: 14, canFly: false, canRide: true,  powerId: "thunder" },
+  ember:      { id: "ember",      name: "Ember Drake",    type: "fire",   color: "#e85d04", accent: "#ffba08", hp: 35, atk: 12, canFly: true,  canRide: true,  powerId: "inferno" },
+  frost:      { id: "frost",      name: "Frost Whelp",    type: "ice",    color: "#48cae4", accent: "#caf0f8", hp: 40, atk: 10, canFly: true,  canRide: true,  powerId: "blizzard" },
+  leaf:       { id: "leaf",       name: "Leaf Serpent",   type: "nature", color: "#2d6a4f", accent: "#95d5b2", hp: 42, atk: 9,  canFly: true,  canRide: true,  powerId: "vineHeal" },
+  storm:      { id: "storm",      name: "Storm Raptor",   type: "storm",  color: "#7b2cbf", accent: "#e0aaff", hp: 32, atk: 14, canFly: true,  canRide: true,  powerId: "thunder" },
   sky:        { id: "sky",        name: "Sky Wyrm",       type: "sky",    color: "#4cc9f0", accent: "#ffffff", hp: 38, atk: 11, canFly: true,  canRide: true,  powerId: "gale" },
-  shadow:     { id: "shadow",     name: "Shadow Fang",    type: "dark",   color: "#3d348b", accent: "#9d4edd", hp: 36, atk: 13, canFly: false, canRide: true,  powerId: "nightPulse" },
+  shadow:     { id: "shadow",     name: "Shadow Fang",    type: "dark",   color: "#3d348b", accent: "#9d4edd", hp: 36, atk: 13, canFly: true,  canRide: true,  powerId: "nightPulse" },
   thunderWing:{ id: "thunderWing",name: "Thunderwing",    type: "storm",  color: "#f4d03f", accent: "#9b59b6", hp: 34, atk: 14, canFly: true,  canRide: true,  powerId: "boltDive" },
   rainbow:    { id: "rainbow",    name: "Rainbow Drake",  type: "sky",    color: "#ff6b9d", accent: "#00d4ff", hp: 36, atk: 10, canFly: true,  canRide: true,  powerId: "prismBeam" },
 };
@@ -2663,8 +2663,8 @@ function handleInput() {
     if (pet.canFly) {
       state.flying = !state.flying;
       state.flyTimer = state.flying ? 600 : 0;
-      showToast(state.flying ? "You soar through the sky! ✈️" : "Landed.");
-    } else showToast("You need a Sky Wyrm to fly! Tame one in tall grass.");
+      showToast(state.flying ? `You soar through the sky on ${pet.name}! ✈️` : "Landed.");
+    } else showToast("Tame a dragon first, then press F to fly!");
   }
 
   if (state.flying) {
