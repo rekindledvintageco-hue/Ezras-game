@@ -596,15 +596,15 @@ const DRAGONS = {
   ember:      { id: "ember",      name: "Ember Drake",    type: "fire",   color: "#e85d04", accent: "#ffba08", hp: 35, atk: 12, canFly: true,  canRide: true,  powerId: "inferno" },
   frost:      { id: "frost",      name: "Frost Whelp",    type: "ice",    color: "#48cae4", accent: "#caf0f8", hp: 40, atk: 10, canFly: true,  canRide: true,  powerId: "blizzard" },
   leaf:       { id: "leaf",       name: "Leaf Serpent",   type: "nature", color: "#2d6a4f", accent: "#95d5b2", hp: 42, atk: 9,  canFly: true,  canRide: true,  powerId: "vineHeal" },
-  storm:      { id: "storm",      name: "Storm Raptor",   type: "storm",  color: "#7b2cbf", accent: "#e0aaff", hp: 32, atk: 14, canFly: true,  canRide: true,  powerId: "thunder" },
+  storm:      { id: "storm",      name: "Storm Raptor",   type: "storm",  color: "#7b2cbf", accent: "#e0aaff", hp: 32, atk: 14, canFly: true,  canRide: true,  powerId: "fireBreath" },
   sky:        { id: "sky",        name: "Sky Wyrm",       type: "sky",    color: "#4cc9f0", accent: "#ffffff", hp: 38, atk: 11, canFly: true,  canRide: true,  powerId: "gale" },
   shadow:     { id: "shadow",     name: "Shadow Fang",    type: "dark",   color: "#3d348b", accent: "#9d4edd", hp: 36, atk: 13, canFly: true,  canRide: true,  powerId: "nightPulse" },
-  thunderWing:{ id: "thunderWing",name: "Thunderwing",    type: "storm",  color: "#f4d03f", accent: "#9b59b6", hp: 34, atk: 14, canFly: true,  canRide: true,  powerId: "boltDive" },
-  rainbow:    { id: "rainbow",    name: "Rainbow Drake",  type: "sky",    color: "#ff6b9d", accent: "#00d4ff", hp: 36, atk: 10, canFly: true,  canRide: true,  powerId: "prismBeam" },
+  thunderWing:{ id: "thunderWing",name: "Thunderwing",    type: "storm",  color: "#f4d03f", accent: "#9b59b6", hp: 34, atk: 14, canFly: true,  canRide: true,  powerId: "fireBreath" },
+  rainbow:    { id: "rainbow",    name: "Rainbow Drake",  type: "sky",    color: "#ff6b9d", accent: "#00d4ff", hp: 36, atk: 10, canFly: true,  canRide: true,  powerId: "fireBreath" },
 };
 
 const POWERS = {
-  inferno:   { id: "inferno",   name: "Inferno Blast",  desc: "Roaring flames!", mult: 1.85, effect: "damage" },
+  inferno:   { id: "inferno",   name: "Inferno Blast",  desc: "Ember's roaring fire-breath!", mult: 1.85, effect: "damage" },
   blizzard:  { id: "blizzard",  name: "Blizzard Shard", desc: "Ice shards — may freeze!", mult: 1.55, effect: "damage", status: "freeze", statusChance: 0.28 },
   vineHeal:  { id: "vineHeal",  name: "Vine Renewal",   desc: "Heals your dragon.", mult: 0, effect: "heal", healRatio: 0.35 },
   thunder:   { id: "thunder",   name: "Thunder Strike", desc: "Huge bolt — small recoil.", mult: 2.0, effect: "damage", recoil: 0.12 },
@@ -612,6 +612,7 @@ const POWERS = {
   nightPulse:{ id: "nightPulse",name: "Night Pulse",    desc: "Drains life from foe.", mult: 1.6, effect: "drain", drainRatio: 0.4 },
   boltDive:  { id: "boltDive",  name: "Bolt Dive",      desc: "Thunderwing swoops with lightning!", mult: 1.9, effect: "damage" },
   prismBeam: { id: "prismBeam", name: "Prism Beam",     desc: "Dazzling rainbow blast!", mult: 1.7, effect: "damage" },
+  fireBreath:{ id: "fireBreath",name: "Fire Breath",    desc: "A blast of dragon fire! 🔥", mult: 1.7, effect: "damage" },
 };
 
 const MINI_PETS = {
@@ -881,15 +882,16 @@ function makeDragon(speciesId, level = 1, withAffinityPet = false) {
 
 function normalizeDragon(d) {
   const base = DRAGONS[d.speciesId] || DRAGONS.ember;
-  d.powerId = d.powerId || base.powerId;
   d.maxHp = d.maxHp || d.hp;
   // Refresh species-level constants from the current DRAGONS table so old
-  // saves pick up new abilities (e.g., canFly being enabled on every species).
+  // saves pick up new abilities (e.g., canFly being enabled on every species,
+  // or powerId switching to fireBreath for fire-breathing dragons).
   d.canFly  = base.canFly;
   d.canRide = base.canRide;
   d.type    = base.type;
   d.color   = base.color;
   d.accent  = base.accent;
+  d.powerId = base.powerId;
   d.name    = d.name || base.name;
   if (d.miniPet && typeof d.miniPet === "string") d.miniPet = makeMiniPet(d.miniPet);
   if (d.miniPet?.petId) d.miniPet = makeMiniPet(d.miniPet.petId);
