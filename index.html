@@ -2404,7 +2404,7 @@ function goDownstairs() {
 
 function exitCabin() {
   const cabin = state.currentCabin;
-  state.mode = "village";
+  state.mode = "overworld";
   state.cabinInterior = null;
   state.currentCabin = null;
   els.cabinPanel?.classList.add("hidden");
@@ -2414,8 +2414,9 @@ function exitCabin() {
     state.player.y = (cabin.ty + 4) * TILE + 4;
   }
   resolvePlayerPosition();
+  state.encounterCooldown = 30;
   window.GameCore?.onCabinExit?.();
-  showToast("Left the cabin. Back in the village!");
+  showToast("Left the cabin! Walk to dragons to battle, or press V here for village build.");
 }
 
 function openCabinTradePanel() {
@@ -2553,6 +2554,11 @@ function handleInput() {
     if (!isBlocked(t1, state.flying)) state.player.x = nx;
     if (!isBlocked(t2, state.flying)) state.player.y = ny;
     if ((dx || dy) && state.mode === "overworld") tryEncounter();
+    // Auto-exit village mode when player walks out of the village zone
+    if (state.mode === "village" && (dx || dy) && !inVillageZone()) {
+      state.mode = "overworld";
+      showToast("Left the village zone. Walk up to dragons to battle them!");
+    }
   } else if (state.mode === "home") {
     const maxX = HOME_W * TILE - state.player.w;
     const maxY = HOME_H * TILE - state.player.h;
