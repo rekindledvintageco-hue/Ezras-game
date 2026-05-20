@@ -584,8 +584,8 @@ kbd {
  */
 
 const TILE = 32;
-const MAP_W = 80;
-const MAP_H = 45;
+const MAP_W = 95;
+const MAP_H = 55;
 const SPAWN_TILE = { tx: 14, ty: 22 };
 const HOME_W = 14;
 const HOME_H = 10;
@@ -1028,7 +1028,7 @@ function generateMap() {
     for (let x = 0; x < MAP_W; x++) {
       let t = 0;
       if (x < 3 || x >= MAP_W - 3 || y < 2 || y >= MAP_H - 2) t = 2;
-      else if (Math.random() < 0.05) t = 3;
+      else if (Math.random() < 0.08) t = 3;
       else if (Math.random() < 0.08) t = 4;
       row.push(t);
     }
@@ -1091,10 +1091,42 @@ function generateMap() {
   setRect(map, 48, 12, 58, 18, 4, false);
   setRect(map, 18, 30, 28, 38, 4, false);
 
-  // Northern forest
-  setRect(map, 8, 4, 28, 12, 3, true);
-  for (let x = 8; x <= 28; x++) {
-    for (let y = 4; y <= 12; y++) {
+  // Northern forest (denser now)
+  setRect(map, 8, 4, 30, 13, 3, true);
+  for (let x = 8; x <= 30; x++) {
+    for (let y = 4; y <= 13; y++) {
+      if (map[y][x] === 3 && Math.random() < 0.25) map[y][x] = 0;
+    }
+  }
+
+  // Southern deep woods (new — fills the expanded southern area)
+  setRect(map, 12, 42, 58, 50, 3, true);
+  for (let x = 12; x <= 58; x++) {
+    for (let y = 42; y <= 50; y++) {
+      if (map[y][x] === 3 && Math.random() < 0.28) map[y][x] = 0;
+    }
+  }
+
+  // South-east forest (new — east of the village)
+  setRect(map, 76, 38, 92, 52, 3, true);
+  for (let x = 76; x <= 92; x++) {
+    for (let y = 38; y <= 52; y++) {
+      if (map[y][x] === 3 && Math.random() < 0.3) map[y][x] = 0;
+    }
+  }
+
+  // Far-east woods (new — past the village)
+  setRect(map, 78, 5, 92, 14, 3, true);
+  for (let x = 78; x <= 92; x++) {
+    for (let y = 5; y <= 14; y++) {
+      if (map[y][x] === 3 && Math.random() < 0.3) map[y][x] = 0;
+    }
+  }
+
+  // Western birch grove (new — west of player home)
+  setRect(map, 4, 25, 11, 40, 3, true);
+  for (let x = 4; x <= 11; x++) {
+    for (let y = 25; y <= 40; y++) {
       if (map[y][x] === 3 && Math.random() < 0.35) map[y][x] = 0;
     }
   }
@@ -1105,6 +1137,11 @@ function generateMap() {
       if (map[y][x] === 3 && Math.random() < 0.7) map[y][x] = 0;
     }
   }
+
+  // Extra tall-grass patches for the bigger map
+  setRect(map, 14, 46, 30, 51, 4, false);
+  setRect(map, 64, 45, 80, 51, 4, false);
+  setRect(map, 80, 18, 90, 26, 4, false);
 
   // Keep paths clear over grass
   for (let x = 10; x < MAP_W - 10; x++) {
@@ -1217,7 +1254,7 @@ function resolvePlayerPosition() {
 
 const worldMap = generateMap();
 
-const MAX_WILD_DRAGONS = 45;
+const MAX_WILD_DRAGONS = 65;
 let wildOverworld = [];
 let wildDragonIdCounter = 0;
 let wildRespawnTimer = 0;
@@ -3107,7 +3144,7 @@ resolvePlayerPosition();
   }
 
   function addClouds() {
-    for (let i = 0; i < 14; i++) {
+    for (let i = 0; i < 22; i++) {
       const cloud = new THREE.Group();
       for (let j = 0; j < 4; j++) {
         const puff = new THREE.Mesh(
