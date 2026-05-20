@@ -3492,59 +3492,239 @@ resolvePlayerPosition();
   function buildHeroMesh() {
     const hero = GC().state.hero;
     const g = new THREE.Group();
+    const skin = hex(hero.skin);
+    const shirtColor = hex(hero.shirt);
+    const pantsColor = hex(hero.pants);
+    const hairColor  = hex(hero.hair);
+    const shoeColor  = lightenHex(pantsColor, -0.45);
+    const shirtTrim  = lightenHex(shirtColor, -0.3);
 
-    const pants = new THREE.Mesh(
-      new THREE.BoxGeometry(0.5, 0.45, 0.32),
-      toonMat(hex(hero.pants))
+    // ── SHOES ─────────────────────────────────────────────
+    const shoeGeo = new THREE.BoxGeometry(0.18, 0.09, 0.26);
+    const shoeL = new THREE.Mesh(shoeGeo, toonMat(shoeColor));
+    shoeL.position.set(-0.12, 0.045, 0.03);
+    g.add(shoeL);
+    const shoeR = shoeL.clone();
+    shoeR.position.x = 0.12;
+    g.add(shoeR);
+
+    // ── LEGS ──────────────────────────────────────────────
+    const legGeo = new THREE.CylinderGeometry(0.09, 0.1, 0.38, 7);
+    const legL = new THREE.Mesh(legGeo, toonMat(pantsColor));
+    legL.position.set(-0.12, 0.28, 0);
+    g.add(legL);
+    const legR = legL.clone();
+    legR.position.x = 0.12;
+    g.add(legR);
+
+    // ── BELT ──────────────────────────────────────────────
+    const belt = new THREE.Mesh(
+      new THREE.BoxGeometry(0.5, 0.07, 0.35),
+      toonMat(0x3d2914)
     );
-    pants.position.y = 0.35;
-    g.add(pants);
-
-    const shirt = new THREE.Mesh(
-      new THREE.BoxGeometry(0.55, 0.38, 0.36),
-      toonMat(hex(hero.shirt))
+    belt.position.y = 0.5;
+    g.add(belt);
+    // Belt buckle
+    const buckle = new THREE.Mesh(
+      new THREE.BoxGeometry(0.1, 0.08, 0.04),
+      toonMat(0xffd166, 0x664400)
     );
-    shirt.position.y = 0.72;
-    g.add(shirt);
+    buckle.position.set(0, 0.5, 0.18);
+    g.add(buckle);
 
+    // ── TORSO / SHIRT ─────────────────────────────────────
+    const torso = new THREE.Mesh(
+      new THREE.BoxGeometry(0.5, 0.4, 0.34),
+      toonMat(shirtColor)
+    );
+    torso.position.y = 0.74;
+    g.add(torso);
+    // Collar/v-neck trim
+    const collar = new THREE.Mesh(
+      new THREE.BoxGeometry(0.32, 0.08, 0.36),
+      toonMat(shirtTrim)
+    );
+    collar.position.y = 0.92;
+    g.add(collar);
+
+    // ── ARMS (held slightly out, classic trainer pose) ────
+    const armGeo = new THREE.CylinderGeometry(0.07, 0.075, 0.36, 6);
+    const armL = new THREE.Mesh(armGeo, toonMat(shirtColor));
+    armL.position.set(-0.32, 0.72, 0);
+    armL.rotation.z = 0.18;
+    g.add(armL);
+    const armR = armL.clone();
+    armR.position.x = 0.32;
+    armR.rotation.z = -0.18;
+    g.add(armR);
+
+    // Cuffs (slightly darker shirt color at the wrist)
+    const cuffGeo = new THREE.CylinderGeometry(0.078, 0.078, 0.06, 6);
+    const cuffL = new THREE.Mesh(cuffGeo, toonMat(shirtTrim));
+    cuffL.position.set(-0.38, 0.55, 0);
+    cuffL.rotation.z = 0.18;
+    g.add(cuffL);
+    const cuffR = cuffL.clone();
+    cuffR.position.x = 0.38;
+    cuffR.rotation.z = -0.18;
+    g.add(cuffR);
+
+    // ── HANDS ─────────────────────────────────────────────
+    const handGeo = new THREE.SphereGeometry(0.08, 8, 8);
+    const handL = new THREE.Mesh(handGeo, toonMat(skin));
+    handL.position.set(-0.4, 0.5, 0);
+    g.add(handL);
+    const handR = handL.clone();
+    handR.position.x = 0.4;
+    g.add(handR);
+
+    // ── NECK ──────────────────────────────────────────────
+    const neck = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.08, 0.085, 0.08, 6),
+      toonMat(skin)
+    );
+    neck.position.y = 0.99;
+    g.add(neck);
+
+    // ── HEAD ──────────────────────────────────────────────
     const head = new THREE.Mesh(
-      new THREE.SphereGeometry(0.32, 12, 10),
-      toonMat(hex(hero.skin))
+      new THREE.SphereGeometry(0.3, 14, 12),
+      toonMat(skin)
     );
-    head.position.y = 1.08;
+    head.scale.set(1, 1.05, 1);
+    head.position.y = 1.17;
     g.add(head);
 
+    // ── EARS ──────────────────────────────────────────────
+    const earGeo = new THREE.SphereGeometry(0.06, 6, 6);
+    const earL = new THREE.Mesh(earGeo, toonMat(skin));
+    earL.position.set(-0.28, 1.15, 0);
+    earL.scale.set(0.6, 1, 0.8);
+    g.add(earL);
+    const earR = earL.clone();
+    earR.position.x = 0.28;
+    g.add(earR);
+
+    // ── HAIR ──────────────────────────────────────────────
     const hair = new THREE.Mesh(
-      new THREE.SphereGeometry(0.34, 10, 8),
-      toonMat(hex(hero.hair))
+      new THREE.SphereGeometry(0.32, 12, 10),
+      toonMat(hairColor)
     );
-    hair.position.y = 1.18;
-    hair.scale.y = hero.hairStyle === "long" ? 1.25 : 0.75;
+    hair.position.y = 1.23;
+    hair.scale.y = hero.hairStyle === "long" ? 1.15 : 0.7;
     g.add(hair);
 
-    if (hero.hat === "cap") {
-      const cap = new THREE.Mesh(
-        new THREE.BoxGeometry(0.5, 0.12, 0.5),
-        toonMat(0xe63946)
+    if (hero.hairStyle === "spiky") {
+      // Five spike tufts on top
+      for (let i = 0; i < 5; i++) {
+        const ang = (i / 4) * Math.PI - Math.PI / 2;
+        const tuft = new THREE.Mesh(
+          new THREE.ConeGeometry(0.06, 0.2, 4),
+          toonMat(hairColor)
+        );
+        tuft.position.set(Math.cos(ang) * 0.18, 1.45, Math.sin(ang) * 0.1);
+        tuft.rotation.x = -0.4;
+        tuft.rotation.z = Math.cos(ang) * 0.5;
+        g.add(tuft);
+      }
+    } else if (hero.hairStyle === "long") {
+      // Long hair down the back
+      const backHair = new THREE.Mesh(
+        new THREE.BoxGeometry(0.42, 0.45, 0.12),
+        toonMat(hairColor)
       );
-      cap.position.y = 1.32;
-      g.add(cap);
-    } else if (hero.hat === "crown") {
-      const crown = new THREE.Mesh(
-        new THREE.BoxGeometry(0.42, 0.14, 0.42),
-        toonMat(0xffd700, 0x664400)
+      backHair.position.set(0, 1.0, -0.2);
+      g.add(backHair);
+      // Side bangs framing the face
+      [-1, 1].forEach((side) => {
+        const bang = new THREE.Mesh(
+          new THREE.BoxGeometry(0.1, 0.18, 0.18),
+          toonMat(hairColor)
+        );
+        bang.position.set(side * 0.22, 1.18, 0.16);
+        g.add(bang);
+      });
+    } else {
+      // Short — small front fringe
+      const fringe = new THREE.Mesh(
+        new THREE.BoxGeometry(0.36, 0.08, 0.14),
+        toonMat(hairColor)
       );
-      crown.position.y = 1.35;
-      g.add(crown);
+      fringe.position.set(0, 1.32, 0.22);
+      g.add(fringe);
     }
 
-    const eyeGeo = new THREE.SphereGeometry(0.05, 6, 6);
-    const e1 = new THREE.Mesh(eyeGeo, toonMat(0x222222));
-    e1.position.set(-0.1, 1.1, 0.28);
-    g.add(e1);
-    const e2 = e1.clone();
-    e2.position.x = 0.1;
-    g.add(e2);
+    // ── HAT ───────────────────────────────────────────────
+    if (hero.hat === "cap") {
+      const cap = new THREE.Mesh(
+        new THREE.BoxGeometry(0.5, 0.14, 0.5),
+        toonMat(0xe63946)
+      );
+      cap.position.y = 1.43;
+      g.add(cap);
+      // Brim sticking out in front
+      const brim = new THREE.Mesh(
+        new THREE.BoxGeometry(0.42, 0.05, 0.2),
+        toonMat(0xe63946)
+      );
+      brim.position.set(0, 1.39, 0.3);
+      g.add(brim);
+      // White button on top
+      const button = new THREE.Mesh(
+        new THREE.SphereGeometry(0.04, 6, 6),
+        toonMat(0xffffff)
+      );
+      button.position.set(0, 1.52, 0);
+      g.add(button);
+    } else if (hero.hat === "crown") {
+      const crownBand = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.22, 0.22, 0.12, 12),
+        toonMat(0xffd700, 0x664400)
+      );
+      crownBand.position.y = 1.46;
+      g.add(crownBand);
+      // Crown spikes around the band
+      for (let i = 0; i < 6; i++) {
+        const ang = (i / 6) * Math.PI * 2;
+        const spike = new THREE.Mesh(
+          new THREE.ConeGeometry(0.05, 0.16, 4),
+          toonMat(0xffd700, 0x664400)
+        );
+        spike.position.set(Math.cos(ang) * 0.2, 1.6, Math.sin(ang) * 0.2);
+        g.add(spike);
+      }
+      // Center jewel
+      const jewel = new THREE.Mesh(
+        new THREE.SphereGeometry(0.05, 8, 8),
+        toonMat(0xff3366, 0x880022)
+      );
+      jewel.position.set(0, 1.48, 0.2);
+      g.add(jewel);
+    }
+
+    // ── EYES (whites + pupils) ─────────────────────────────
+    const eyeWhiteGeo = new THREE.SphereGeometry(0.06, 8, 8);
+    const eyeWhiteL = new THREE.Mesh(eyeWhiteGeo, toonMat(0xffffff));
+    eyeWhiteL.position.set(-0.1, 1.18, 0.24);
+    g.add(eyeWhiteL);
+    const eyeWhiteR = eyeWhiteL.clone();
+    eyeWhiteR.position.x = 0.1;
+    g.add(eyeWhiteR);
+    const pupilGeo = new THREE.SphereGeometry(0.035, 6, 6);
+    const pupilL = new THREE.Mesh(pupilGeo, toonMat(0x222222));
+    pupilL.position.set(-0.1, 1.18, 0.29);
+    g.add(pupilL);
+    const pupilR = pupilL.clone();
+    pupilR.position.x = 0.1;
+    g.add(pupilR);
+
+    // ── MOUTH (small smile) ────────────────────────────────
+    const mouth = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, 0.02, 0.02),
+      toonMat(0x4a1c00)
+    );
+    mouth.position.set(0, 1.04, 0.28);
+    g.add(mouth);
 
     return g;
   }
