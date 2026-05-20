@@ -3117,73 +3117,299 @@ resolvePlayerPosition();
     }
   }
 
+  function lightenHex(hexColor, amount) {
+    const r = (hexColor >> 16) & 0xff;
+    const g = (hexColor >> 8) & 0xff;
+    const b = hexColor & 0xff;
+    let nr, ng, nb;
+    if (amount >= 0) {
+      nr = Math.min(255, Math.floor(r + (255 - r) * amount));
+      ng = Math.min(255, Math.floor(g + (255 - g) * amount));
+      nb = Math.min(255, Math.floor(b + (255 - b) * amount));
+    } else {
+      nr = Math.max(0, Math.floor(r * (1 + amount)));
+      ng = Math.max(0, Math.floor(g * (1 + amount)));
+      nb = Math.max(0, Math.floor(b * (1 + amount)));
+    }
+    return (nr << 16) | (ng << 8) | nb;
+  }
+
   function buildDragonMesh(speciesId, scale = 1) {
     const d = GC().DRAGONS[speciesId];
     const g = new THREE.Group();
+    const s = scale;
+    const bodyColor = hex(d.color);
+    const accentColor = hex(d.accent);
+    const bellyColor = lightenHex(bodyColor, 0.35);
+    const darkAccent = lightenHex(accentColor, -0.25);
     const glowEmissive = speciesId === "thunderWing" ? 0x443300 : speciesId === "rainbow" ? 0x220033 : 0x000000;
+
+    // ── BODY (chunky, muscular like Charizard) ─────────────
     const body = new THREE.Mesh(
-      new THREE.SphereGeometry(0.55 * scale, 12, 10),
-      toonMat(hex(d.color), glowEmissive)
+      new THREE.SphereGeometry(0.5 * s, 12, 10),
+      toonMat(bodyColor, glowEmissive)
     );
-    body.scale.set(1.2, 0.9, 1);
-    body.position.y = 0.65 * scale;
+    body.scale.set(1.0, 0.95, 1.1);
+    body.position.y = 0.7 * s;
     g.add(body);
 
-    const head = new THREE.Mesh(
-      new THREE.SphereGeometry(0.38 * scale, 10, 8),
-      toonMat(hex(d.color))
+    // Lighter belly (chest plate)
+    const belly = new THREE.Mesh(
+      new THREE.SphereGeometry(0.36 * s, 10, 8),
+      toonMat(bellyColor)
     );
-    head.position.set(0, 0.95 * scale, 0.35 * scale);
+    belly.scale.set(0.85, 0.7, 1.0);
+    belly.position.set(0, 0.6 * s, 0.18 * s);
+    g.add(belly);
+
+    // ── HEAD (snout-forward) ────────────────────────────────
+    const head = new THREE.Mesh(
+      new THREE.SphereGeometry(0.28 * s, 10, 8),
+      toonMat(bodyColor, glowEmissive)
+    );
+    head.scale.set(1, 0.9, 1.25);
+    head.position.set(0, 1.1 * s, 0.55 * s);
     g.add(head);
 
-    const horn = new THREE.Mesh(
-      new THREE.ConeGeometry(0.12 * scale, 0.45 * scale, 4),
-      toonMat(hex(d.accent))
+    // Snout (block at the front of the head)
+    const snout = new THREE.Mesh(
+      new THREE.BoxGeometry(0.22 * s, 0.18 * s, 0.22 * s),
+      toonMat(bodyColor)
     );
-    horn.position.set(0, 1.25 * scale, 0.55 * scale);
-    horn.rotation.x = -0.5;
-    g.add(horn);
+    snout.position.set(0, 1.04 * s, 0.82 * s);
+    g.add(snout);
 
-    const eyeL = new THREE.Mesh(
-      new THREE.SphereGeometry(0.09 * scale, 8, 8),
-      toonMat(0xffffff)
+    // Lighter under-snout (jaw)
+    const jaw = new THREE.Mesh(
+      new THREE.BoxGeometry(0.2 * s, 0.08 * s, 0.2 * s),
+      toonMat(bellyColor)
     );
-    eyeL.position.set(-0.15 * scale, 1.02 * scale, 0.62 * scale);
+    jaw.position.set(0, 0.95 * s, 0.82 * s);
+    g.add(jaw);
+
+    // ── HORNS (two backward, like Charizard) ───────────────
+    const hornGeo = new THREE.ConeGeometry(0.08 * s, 0.42 * s, 5);
+    const hornL = new THREE.Mesh(hornGeo, toonMat(accentColor));
+    hornL.position.set(-0.17 * s, 1.38 * s, 0.42 * s);
+    hornL.rotation.x = 0.6;
+    hornL.rotation.z = 0.3;
+    g.add(hornL);
+    const hornR = hornL.clone();
+    hornR.position.x = 0.17 * s;
+    hornR.rotation.z = -0.3;
+    g.add(hornR);
+
+    // Brow ridges (small dark accent above eyes)
+    const browGeo = new THREE.BoxGeometry(0.14 * s, 0.04 * s, 0.06 * s);
+    const browL = new THREE.Mesh(browGeo, toonMat(darkAccent));
+    browL.position.set(-0.13 * s, 1.21 * s, 0.7 * s);
+    browL.rotation.z = -0.15;
+    g.add(browL);
+    const browR = browL.clone();
+    browR.position.x = 0.13 * s;
+    browR.rotation.z = 0.15;
+    g.add(browR);
+
+    // ── EYES + PUPILS ───────────────────────────────────────
+    const eyeGeo = new THREE.SphereGeometry(0.07 * s, 8, 8);
+    const eyeL = new THREE.Mesh(eyeGeo, toonMat(0xffffff));
+    eyeL.position.set(-0.13 * s, 1.13 * s, 0.74 * s);
     g.add(eyeL);
     const eyeR = eyeL.clone();
-    eyeR.position.x = 0.15 * scale;
+    eyeR.position.x = 0.13 * s;
     g.add(eyeR);
-
-    const pupilL = new THREE.Mesh(
-      new THREE.SphereGeometry(0.04 * scale, 6, 6),
-      toonMat(0x111111)
-    );
-    pupilL.position.set(-0.15 * scale, 1.02 * scale, 0.68 * scale);
+    const pupilGeo = new THREE.SphereGeometry(0.04 * s, 6, 6);
+    const pupilL = new THREE.Mesh(pupilGeo, toonMat(0x111111));
+    pupilL.position.set(-0.13 * s, 1.12 * s, 0.8 * s);
     g.add(pupilL);
     const pupilR = pupilL.clone();
-    pupilR.position.x = 0.15 * scale;
+    pupilR.position.x = 0.13 * s;
     g.add(pupilR);
 
-    if (d.canFly) {
-      const wingGeo = new THREE.SphereGeometry(0.35 * scale, 6, 4);
-      const w1 = new THREE.Mesh(wingGeo, toonMat(0xe0fbfc));
-      w1.scale.set(1.4, 0.25, 0.8);
-      w1.position.set(-0.55 * scale, 0.75 * scale, 0);
-      w1.rotation.z = 0.4;
-      g.add(w1);
-      const w2 = w1.clone();
-      w2.position.x = 0.55 * scale;
-      w2.rotation.z = -0.4;
-      g.add(w2);
+    // ── FANGS ───────────────────────────────────────────────
+    const fangGeo = new THREE.ConeGeometry(0.035 * s, 0.1 * s, 3);
+    const fangL = new THREE.Mesh(fangGeo, toonMat(0xffffff));
+    fangL.position.set(-0.06 * s, 0.95 * s, 0.9 * s);
+    fangL.rotation.x = Math.PI;
+    g.add(fangL);
+    const fangR = fangL.clone();
+    fangR.position.x = 0.06 * s;
+    g.add(fangR);
+
+    // ── WHISKERS (Charizard-mega style, two curling feelers off the snout) ─
+    const whiskerColor = lightenHex(accentColor, 0.1);
+    [-1, 1].forEach((side) => {
+      // 3-segment whisker, curving back along the head
+      const segs = [
+        { len: 0.32, x: 0.16, y: 1.05, z: 0.7,  rotZ:  0.4 * side, rotY: 0.4 * side },
+        { len: 0.30, x: 0.30, y: 1.20, z: 0.45, rotZ:  0.7 * side, rotY: 0.6 * side },
+        { len: 0.28, x: 0.42, y: 1.30, z: 0.15, rotZ:  1.0 * side, rotY: 0.8 * side },
+      ];
+      segs.forEach((sg) => {
+        const w = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.025 * s, 0.025 * s, sg.len * s, 5),
+          toonMat(whiskerColor)
+        );
+        w.position.set(sg.x * s * side, sg.y * s, sg.z * s);
+        w.rotation.z = sg.rotZ;
+        w.rotation.y = sg.rotY;
+        g.add(w);
+      });
+    });
+
+    // ── MANE (cream-colored fluffy fur tufts down the spine) ─
+    const maneColor = 0xfff2cc;
+    for (let i = 0; i < 5; i++) {
+      const tuft = new THREE.Mesh(
+        new THREE.ConeGeometry(0.14 * s - i * 0.012 * s, 0.32 * s - i * 0.02 * s, 5),
+        toonMat(maneColor, 0x554400)
+      );
+      tuft.position.set(0, 1.15 * s - i * 0.06 * s, 0.25 * s - i * 0.18 * s);
+      tuft.rotation.x = 0.25 + i * 0.05;
+      g.add(tuft);
     }
 
-    const tail = new THREE.Mesh(
-      new THREE.ConeGeometry(0.18 * scale, 0.7 * scale, 5),
-      toonMat(hex(d.accent))
-    );
-    tail.position.set(0, 0.45 * scale, -0.55 * scale);
-    tail.rotation.x = 0.8;
-    g.add(tail);
+    // ── BACK SPIKES (small, between the mane tufts) ─────────
+    for (let i = 0; i < 3; i++) {
+      const spike = new THREE.Mesh(
+        new THREE.ConeGeometry(0.05 * s, 0.16 * s, 4),
+        toonMat(darkAccent)
+      );
+      spike.position.set(0, 1.0 * s - i * 0.05 * s, 0.05 * s - i * 0.2 * s);
+      g.add(spike);
+    }
+
+    // ── WINGS (angular bat-style, like Charizard) ──────────
+    const flyer = !!d.canFly;
+    const wingSize = flyer ? 1.4 : 0.9;
+    const wingMembraneColor = flyer ? darkAccent : accentColor;
+
+    [-1, 1].forEach((side) => {
+      // Wing arm bone (top edge that goes from shoulder out)
+      const wingArm = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.05 * s, 0.05 * s, 0.9 * s * wingSize, 5),
+        toonMat(accentColor)
+      );
+      wingArm.position.set(side * 0.55 * s * wingSize, 1.05 * s, -0.05 * s);
+      wingArm.rotation.z = side * Math.PI / 2 + side * -0.35;
+      g.add(wingArm);
+
+      // 3 wing fingers (struts angling down-back)
+      for (let i = 0; i < 3; i++) {
+        const fingerLen = 0.55 * s * wingSize - i * 0.08 * s;
+        const finger = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.035 * s, 0.035 * s, fingerLen, 5),
+          toonMat(accentColor)
+        );
+        const tipX = side * (0.95 * s * wingSize - i * 0.18 * s);
+        const tipZ = -0.35 * s - i * 0.1 * s;
+        finger.position.set(tipX * 0.5 + side * 0.55 * s * wingSize * 0.5, 1.0 * s - fingerLen / 2 * 0.5, tipZ * 0.5);
+        finger.rotation.z = side * (0.6 + i * 0.15);
+        finger.rotation.x = -0.4 + i * 0.1;
+        g.add(finger);
+      }
+
+      // Wing membrane — three flat triangular panels filling between fingers
+      for (let i = 0; i < 3; i++) {
+        const panel = new THREE.Mesh(
+          new THREE.BoxGeometry(0.5 * s * wingSize - i * 0.08 * s, 0.04 * s, 0.42 * s * wingSize - i * 0.06 * s),
+          toonMat(wingMembraneColor, 0x111111)
+        );
+        panel.position.set(
+          side * (0.75 * s * wingSize - i * 0.1 * s),
+          0.85 * s - i * 0.05 * s,
+          -0.1 * s - i * 0.15 * s
+        );
+        panel.rotation.z = side * (0.5 + i * 0.1);
+        panel.rotation.x = -0.2 + i * 0.08;
+        g.add(panel);
+      }
+    });
+
+    // ── ARMS (small dragon arms with claws) ────────────────
+    const armGeo = new THREE.CylinderGeometry(0.07 * s, 0.09 * s, 0.28 * s, 6);
+    const armL = new THREE.Mesh(armGeo, toonMat(bodyColor));
+    armL.position.set(-0.32 * s, 0.55 * s, 0.28 * s);
+    armL.rotation.z = 0.4;
+    g.add(armL);
+    const armR = armL.clone();
+    armR.position.x = 0.32 * s;
+    armR.rotation.z = -0.4;
+    g.add(armR);
+
+    // Claws (small white triangles at the hands)
+    const clawGeo = new THREE.ConeGeometry(0.04 * s, 0.08 * s, 3);
+    [-0.45, 0.45].forEach((xp) => {
+      for (let i = -1; i <= 1; i++) {
+        const claw = new THREE.Mesh(clawGeo, toonMat(0xffffff));
+        claw.position.set(xp * s + i * 0.04 * s, 0.38 * s, 0.36 * s);
+        claw.rotation.x = -0.4;
+        g.add(claw);
+      }
+    });
+
+    // ── LEGS + FEET ────────────────────────────────────────
+    const legGeo = new THREE.CylinderGeometry(0.11 * s, 0.14 * s, 0.42 * s, 6);
+    const legL = new THREE.Mesh(legGeo, toonMat(bodyColor));
+    legL.position.set(-0.22 * s, 0.26 * s, -0.05 * s);
+    g.add(legL);
+    const legR = legL.clone();
+    legR.position.x = 0.22 * s;
+    g.add(legR);
+
+    const footGeo = new THREE.BoxGeometry(0.2 * s, 0.09 * s, 0.26 * s);
+    const footL = new THREE.Mesh(footGeo, toonMat(accentColor));
+    footL.position.set(-0.22 * s, 0.05 * s, 0.05 * s);
+    g.add(footL);
+    const footR = footL.clone();
+    footR.position.x = 0.22 * s;
+    g.add(footR);
+
+    // Toe claws on each foot
+    [-0.22, 0.22].forEach((xp) => {
+      for (let i = -1; i <= 1; i++) {
+        const toe = new THREE.Mesh(
+          new THREE.ConeGeometry(0.035 * s, 0.07 * s, 3),
+          toonMat(0xffffff)
+        );
+        toe.position.set(xp * s + i * 0.06 * s, 0.04 * s, 0.18 * s);
+        toe.rotation.x = -1.4;
+        g.add(toe);
+      }
+    });
+
+    // ── TAIL (segmented, tapering) ─────────────────────────
+    for (let i = 0; i < 4; i++) {
+      const segScale = 1 - i * 0.16;
+      const seg = new THREE.Mesh(
+        new THREE.SphereGeometry(0.18 * s * segScale, 8, 6),
+        toonMat(bodyColor)
+      );
+      seg.position.set(0, 0.55 * s - i * 0.03 * s, -0.4 * s - i * 0.22 * s);
+      g.add(seg);
+    }
+
+    // Tail-tip fluffy flame tuft (cream mane-style, like Charizard reference)
+    const isFire = d.type === "fire";
+    const tuftColor = isFire ? 0xff8c2a : maneColor;
+    const tuftGlow  = isFire ? 0x661a00 : 0x554400;
+    // 4 overlapping cones in a fan/flame shape
+    const tuftCones = [
+      { y: 0.5, z: -1.05, sx: 0.18, sy: 0.45, rotX: -0.3, rotZ:  0.0 },
+      { y: 0.62, z: -1.18, sx: 0.16, sy: 0.50, rotX: -0.6, rotZ:  0.25 },
+      { y: 0.62, z: -1.18, sx: 0.16, sy: 0.50, rotX: -0.6, rotZ: -0.25 },
+      { y: 0.45, z: -1.30, sx: 0.14, sy: 0.40, rotX: -1.0, rotZ:  0.0 },
+    ];
+    tuftCones.forEach((tc) => {
+      const cone = new THREE.Mesh(
+        new THREE.ConeGeometry(tc.sx * s, tc.sy * s, 5),
+        toonMat(tuftColor, tuftGlow)
+      );
+      cone.position.set(0, tc.y * s, tc.z * s);
+      cone.rotation.x = tc.rotX;
+      cone.rotation.z = tc.rotZ;
+      g.add(cone);
+    });
 
     return g;
   }
