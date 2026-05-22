@@ -601,7 +601,7 @@ const DRAGONS = {
   shadow:     { id: "shadow",     name: "Shadow Fang",    type: "dark",   color: "#3d348b", accent: "#9d4edd", hp: 36, atk: 13, canFly: true,  canRide: true,  powerId: "nightPulse" },
   thunderWing:{ id: "thunderWing",name: "Thunderwing",    type: "storm",  color: "#f4d03f", accent: "#9b59b6", hp: 34, atk: 14, canFly: true,  canRide: true,  powerId: "fireBreath" },
   rainbow:    { id: "rainbow",    name: "Rainbow Drake",  type: "sky",    color: "#ff6b9d", accent: "#00d4ff", hp: 36, atk: 10, canFly: true,  canRide: true,  powerId: "fireBreath" },
-  fininator:  { id: "fininator",  name: "Fininator",      type: "ice",    color: "#06b6d4", accent: "#a5f3fc", hp: 40, atk: 13, canFly: true,  canRide: true,  powerId: "finSlash" },
+  fininator:  { id: "fininator",  name: "Fininator",      type: "ice",    color: "#c1121f", accent: "#3a86ff", hp: 40, atk: 13, canFly: true,  canRide: true,  powerId: "finSlash" },
 };
 
 const POWERS = {
@@ -3286,6 +3286,34 @@ resolvePlayerPosition();
     fangR.position.x = 0.06 * s;
     g.add(fangR);
 
+    // ── FININATOR special: blue flames from mouth corners ──
+    if (speciesId === "fininator") {
+      [-1, 1].forEach((side) => {
+        // Big blue flame at the mouth corner
+        const flame = new THREE.Mesh(
+          new THREE.ConeGeometry(0.09 * s, 0.32 * s, 5),
+          toonMat(0x3a86ff, 0x001a55)
+        );
+        flame.position.set(side * 0.16 * s, 1.12 * s, 0.85 * s);
+        flame.rotation.z = side * -0.6;
+        flame.rotation.x = -0.3;
+        flame.userData.isFinFire = true;
+        flame.userData.flameSide = side;
+        g.add(flame);
+        // Smaller flame tongue licking further out
+        const flame2 = new THREE.Mesh(
+          new THREE.ConeGeometry(0.06 * s, 0.24 * s, 5),
+          toonMat(0x8ecae6, 0x002a66)
+        );
+        flame2.position.set(side * 0.26 * s, 1.32 * s, 0.78 * s);
+        flame2.rotation.z = side * -0.9;
+        flame2.rotation.x = -0.5;
+        flame2.userData.isFinFire = true;
+        flame2.userData.flameSide = side;
+        g.add(flame2);
+      });
+    }
+
     // ── WHISKERS (Charizard-mega style, two curling feelers off the snout) ─
     const whiskerColor = lightenHex(accentColor, 0.1);
     [-1, 1].forEach((side) => {
@@ -3468,8 +3496,9 @@ resolvePlayerPosition();
 
     // Tail-tip fluffy flame tuft (cream mane-style, like Charizard reference)
     const isFire = d.type === "fire";
-    const tuftColor = isFire ? 0xff8c2a : maneColor;
-    const tuftGlow  = isFire ? 0x661a00 : 0x554400;
+    const isFin  = speciesId === "fininator";
+    const tuftColor = isFin ? 0x3a86ff : isFire ? 0xff8c2a : maneColor;
+    const tuftGlow  = isFin ? 0x001a55 : isFire ? 0x661a00 : 0x554400;
     // 4 overlapping cones in a fan/flame shape
     const tuftCones = [
       { y: 0.5, z: -1.05, sx: 0.18, sy: 0.45, rotX: -0.3, rotZ:  0.0 },
@@ -4287,6 +4316,21 @@ resolvePlayerPosition();
         }
       });
     }
+
+    // Fininator's blue mouth-flames flicker (scale + position)
+    const flickerFire = (mesh) => {
+      mesh.traverse?.((c) => {
+        if (c.userData?.isFinFire) {
+          const f = 0.85 + Math.sin(clock.elapsedTime * 12 + c.userData.flameSide) * 0.2;
+          c.scale.y = f;
+          c.scale.x = 1.0 + Math.sin(clock.elapsedTime * 9 + c.userData.flameSide * 2) * 0.15;
+        }
+      });
+    };
+    wildMeshes.forEach((entry) => flickerFire(entry.mesh));
+    if (mountDragonMesh) flickerFire(mountDragonMesh);
+    if (battleMeshes.player) flickerFire(battleMeshes.player);
+    if (battleMeshes.wild) flickerFire(battleMeshes.wild);
 
     updateCamera();
     renderer.render(scene, camera);
