@@ -539,7 +539,7 @@ kbd {
         </div>
       </div>
       <ul>
-        <li>🐲 Walk up to <strong>wild dragons</strong> roaming the world — 8 species!</li>
+        <li>🐲 Walk up to <strong>wild dragons</strong> roaming the world — 9 species (including the <strong>Fininator</strong>)!</li>
         <li>✈️ Every dragon can fly — tame one and press <kbd>F</kbd> to soar!</li>
         <li>🪵 Press <kbd>T</kbd> near trees to chop wood → build cabins in the village!</li>
         <li>🏠 Press <kbd>E</kbd> at your house · <kbd>V</kbd> village · <kbd>F</kbd> fly</li>
@@ -601,6 +601,7 @@ const DRAGONS = {
   shadow:     { id: "shadow",     name: "Shadow Fang",    type: "dark",   color: "#3d348b", accent: "#9d4edd", hp: 36, atk: 13, canFly: true,  canRide: true,  powerId: "nightPulse" },
   thunderWing:{ id: "thunderWing",name: "Thunderwing",    type: "storm",  color: "#f4d03f", accent: "#9b59b6", hp: 34, atk: 14, canFly: true,  canRide: true,  powerId: "fireBreath" },
   rainbow:    { id: "rainbow",    name: "Rainbow Drake",  type: "sky",    color: "#ff6b9d", accent: "#00d4ff", hp: 36, atk: 10, canFly: true,  canRide: true,  powerId: "fireBreath" },
+  fininator:  { id: "fininator",  name: "Fininator",      type: "ice",    color: "#06b6d4", accent: "#a5f3fc", hp: 40, atk: 13, canFly: true,  canRide: true,  powerId: "finSlash" },
 };
 
 const POWERS = {
@@ -613,6 +614,7 @@ const POWERS = {
   boltDive:  { id: "boltDive",  name: "Bolt Dive",      desc: "Thunderwing swoops with lightning!", mult: 1.9, effect: "damage" },
   prismBeam: { id: "prismBeam", name: "Prism Beam",     desc: "Dazzling rainbow blast!", mult: 1.7, effect: "damage" },
   fireBreath:{ id: "fireBreath",name: "Fire Breath",    desc: "A blast of dragon fire! 🔥", mult: 1.7, effect: "damage" },
+  finSlash:  { id: "finSlash",  name: "Fin Slash",      desc: "Razor-sharp fins slice through the foe!", mult: 1.75, effect: "damage" },
 };
 
 const MINI_PETS = {
@@ -633,6 +635,7 @@ const DRAGON_PET_AFFINITY = {
   shadow:      "shadeBat",
   thunderWing: "buzzBeetle",
   rainbow:     "cloudMoth",
+  fininator:   "snowBunny",
 };
 
 const MINI_PET_POOL = Object.keys(MINI_PETS);
@@ -730,7 +733,7 @@ const DEFAULT_HERO = {
   hat: "none",
 };
 
-const WILD_POOL = ["ember", "frost", "leaf", "storm", "sky", "shadow", "thunderWing", "rainbow"];
+const WILD_POOL = ["ember", "frost", "leaf", "storm", "sky", "shadow", "thunderWing", "rainbow", "fininator"];
 
 const CABINS = {
   small: { id: "small", name: "Small Cabin", woodCost: 50 },
@@ -3189,7 +3192,7 @@ resolvePlayerPosition();
     const accentColor = hex(d.accent);
     const bellyColor = lightenHex(bodyColor, 0.35);
     const darkAccent = lightenHex(accentColor, -0.25);
-    const glowEmissive = speciesId === "thunderWing" ? 0x443300 : speciesId === "rainbow" ? 0x220033 : 0x000000;
+    const glowEmissive = speciesId === "thunderWing" ? 0x443300 : speciesId === "rainbow" ? 0x220033 : speciesId === "fininator" ? 0x003344 : 0x000000;
 
     // ── BODY (chunky, muscular like Charizard) ─────────────
     const body = new THREE.Mesh(
@@ -3324,6 +3327,33 @@ resolvePlayerPosition();
       );
       spike.position.set(0, 1.0 * s - i * 0.05 * s, 0.05 * s - i * 0.2 * s);
       g.add(spike);
+    }
+
+    // ── FININATOR special: razor side fins along the body ──
+    if (speciesId === "fininator") {
+      [-1, 1].forEach((side) => {
+        for (let i = 0; i < 3; i++) {
+          const fin = new THREE.Mesh(
+            new THREE.ConeGeometry(0.1 * s, 0.4 * s, 4),
+            toonMat(accentColor, 0x002244)
+          );
+          fin.position.set(side * 0.5 * s, 0.6 * s, 0.1 * s - i * 0.3 * s);
+          fin.rotation.z = side * 1.0;
+          fin.rotation.x = -0.2;
+          fin.scale.z = 0.4;
+          g.add(fin);
+        }
+        // Big tail-fin near the end of the tail
+        const tailFin = new THREE.Mesh(
+          new THREE.ConeGeometry(0.16 * s, 0.55 * s, 4),
+          toonMat(accentColor, 0x002244)
+        );
+        tailFin.position.set(side * 0.18 * s, 0.55 * s, -0.85 * s);
+        tailFin.rotation.z = side * 1.1;
+        tailFin.rotation.x = -0.3;
+        tailFin.scale.z = 0.35;
+        g.add(tailFin);
+      });
     }
 
     // ── WINGS (angular bat-style, like Charizard) ──────────
