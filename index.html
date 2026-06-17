@@ -463,8 +463,9 @@ kbd {
       </section>
       <section>
         <h3>World</h3>
-        <p><kbd>E</kbd> Enter home/cabin · <kbd>V</kbd> Village · <kbd>F</kbd> Fly</p>
-        <p><kbd>T</kbd> Chop tree 🪵 · <kbd>1</kbd>–<kbd>3</kbd> Dragons · <kbd>M</kbd> Mount</p>
+        <p><kbd>E</kbd> Enter home/cabin · <kbd>V</kbd> Village · <kbd>F</kbd> Fly dragon</p>
+        <p><kbd>T</kbd> Chop tree 🪵 · <kbd>1</kbd>–<kbd>3</kbd> Dragon · <kbd>M</kbd> Mount dragon</p>
+        <p><kbd>R</kbd> Tame nearby horse 🐴 · <kbd>O</kbd> Ride horse</p>
         <p><kbd>C</kbd> Customize · <kbd>I</kbd> Weapons · <kbd>B</kbd> Shrine · <kbd>P</kbd> Pet</p>
       </section>
       <section>
@@ -554,11 +555,11 @@ kbd {
         </div>
       </div>
       <ul>
-        <li>🐲 Walk up to <strong>wild dragons</strong> roaming the world — 9 species (including the <strong>Fininator</strong>)!</li>
-        <li>✈️ Every dragon can fly — tame one and press <kbd>F</kbd> to soar!</li>
-        <li>🪵 Press <kbd>T</kbd> near trees to chop wood → build cabins in the village!</li>
-        <li>🏠 Press <kbd>E</kbd> at your house · <kbd>V</kbd> village · <kbd>F</kbd> fly</li>
-        <li>⚡ Powers, pets, and weapons in battle</li>
+        <li>🐲 9 dragon species roam the world — including the red-and-blue <strong>Fininator</strong>!</li>
+        <li>✈️ Every dragon can fly — press <kbd>F</kbd> to soar!</li>
+        <li>🐴 <strong>Wild horses</strong> graze in the southern plains — press <kbd>R</kbd> to tame, <kbd>O</kbd> to ride!</li>
+        <li>🌊 Walk into a lake to swim — but don't stay too long or you'll drown!</li>
+        <li>🪵 Chop trees with <kbd>T</kbd>, build cabins with <kbd>V</kbd>!</li>
       </ul>
       <button id="start-btn">Start Adventure</button>
     </div>
@@ -2985,12 +2986,18 @@ function handleInput() {
   keysJust.clear();
 }
 
+let horseHintShown = false;
 function tickLogic() {
   if (state.mode !== "battle") handleInput();
   if (state.mode === "overworld") {
     updateWildDragons();
     updateWildHorses();
     checkWildDragonTouch();
+    // One-time hint when player gets close to their first wild horse
+    if (!horseHintShown && state.horses.length === 0 && nearestWildHorse(80)) {
+      horseHintShown = true;
+      showToast("🐴 A wild horse! Press R to tame it, then O to ride!", 4500);
+    }
   }
   if (state.encounterCooldown > 0) state.encounterCooldown--;
   updateHud();
@@ -3341,6 +3348,49 @@ resolvePlayerPosition();
     }
 
     addClouds();
+    addBackgroundMountains();
+  }
+
+  function addBackgroundMountains() {
+    const W = GC().MAP_W * UNIT;
+    const H = GC().MAP_H * UNIT;
+    // Distant mountain peaks ringing the map for TOTK-style horizon
+    const peaks = [
+      // North
+      { x: W * 0.15, z: -8, h: 14, r: 7, c: 0x6e7a85 },
+      { x: W * 0.35, z: -10, h: 18, r: 8, c: 0x5a6571 },
+      { x: W * 0.55, z: -9, h: 16, r: 7, c: 0x6e7a85 },
+      { x: W * 0.78, z: -7, h: 12, r: 6, c: 0x7f8a96 },
+      // South
+      { x: W * 0.2,  z: H + 8, h: 15, r: 7, c: 0x6e7a85 },
+      { x: W * 0.5,  z: H + 10, h: 17, r: 8, c: 0x5a6571 },
+      { x: W * 0.82, z: H + 9, h: 13, r: 6, c: 0x6e7a85 },
+      // East
+      { x: W + 8, z: H * 0.25, h: 16, r: 7, c: 0x5a6571 },
+      { x: W + 10, z: H * 0.5, h: 19, r: 9, c: 0x4f5862 },
+      { x: W + 7, z: H * 0.75, h: 14, r: 6, c: 0x6e7a85 },
+      // West
+      { x: -8, z: H * 0.2, h: 13, r: 6, c: 0x6e7a85 },
+      { x: -10, z: H * 0.55, h: 18, r: 8, c: 0x5a6571 },
+      { x: -7, z: H * 0.85, h: 14, r: 6, c: 0x6e7a85 },
+    ];
+    peaks.forEach((p) => {
+      const m = new THREE.Mesh(
+        new THREE.ConeGeometry(p.r, p.h, 5),
+        toonMat(p.c, 0x202830)
+      );
+      m.position.set(p.x, p.h / 2 - 0.5, p.z);
+      m.rotation.y = Math.random() * Math.PI;
+      worldGroup.add(m);
+      // Snowy cap (smaller white cone on top)
+      const cap = new THREE.Mesh(
+        new THREE.ConeGeometry(p.r * 0.35, p.h * 0.3, 5),
+        toonMat(0xfafafa, 0xdddddd)
+      );
+      cap.position.set(p.x, p.h * 0.85, p.z);
+      cap.rotation.y = m.rotation.y;
+      worldGroup.add(cap);
+    });
   }
 
   function buildSmallCabinMesh() {
@@ -3929,34 +3979,84 @@ resolvePlayerPosition();
       g.add(eye);
     });
 
-    // Mane (cones running along the neck)
-    for (let i = 0; i < 5; i++) {
+    // Flowing TOTK-style mane: 9 overlapping tufts down the neck, longer at the base
+    for (let i = 0; i < 9; i++) {
+      const t = i / 8;
       const tuft = new THREE.Mesh(
-        new THREE.ConeGeometry(0.13 * s, 0.28 * s, 5),
+        new THREE.ConeGeometry(0.15 * s - t * 0.04 * s, 0.45 * s - t * 0.05 * s, 5),
         toonMat(mane)
       );
-      tuft.position.set(0, 1.55 * s + i * 0.05 * s, 1.05 * s - i * 0.18 * s);
-      tuft.rotation.x = 0.2;
+      tuft.position.set(
+        Math.sin(i * 0.4) * 0.04 * s,
+        1.5 * s + i * 0.06 * s,
+        1.15 * s - i * 0.13 * s
+      );
+      tuft.rotation.x = 0.35 + (i % 2) * 0.15;
+      tuft.rotation.z = (i % 2 === 0 ? 0.18 : -0.18);
       g.add(tuft);
     }
 
-    // Forelock (between ears)
-    const forelock = new THREE.Mesh(
-      new THREE.ConeGeometry(0.1 * s, 0.18 * s, 5),
-      toonMat(mane)
-    );
-    forelock.position.set(0, 1.95 * s, 1.18 * s);
-    forelock.rotation.x = 0.3;
-    g.add(forelock);
+    // Forelock (longer hair between ears, falling forward)
+    for (let i = 0; i < 3; i++) {
+      const fl = new THREE.Mesh(
+        new THREE.ConeGeometry(0.08 * s, 0.22 * s, 5),
+        toonMat(mane)
+      );
+      fl.position.set((i - 1) * 0.08 * s, 1.95 * s, 1.22 * s);
+      fl.rotation.x = 0.45 + (i - 1) * 0.1;
+      g.add(fl);
+    }
 
-    // Tail (cylinder + tuft)
+    // Long TOTK-style tail: cylinder body + 5 trailing tufts
     const tail = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.08 * s, 0.18 * s, 0.7 * s, 6),
+      new THREE.CylinderGeometry(0.09 * s, 0.18 * s, 0.85 * s, 6),
       toonMat(mane)
     );
-    tail.position.set(0, 1.0 * s, -1.1 * s);
+    tail.position.set(0, 1.05 * s, -1.15 * s);
     tail.rotation.x = 0.6;
     g.add(tail);
+    for (let i = 0; i < 5; i++) {
+      const tt = new THREE.Mesh(
+        new THREE.ConeGeometry(0.1 * s - i * 0.01 * s, 0.4 * s - i * 0.04 * s, 5),
+        toonMat(mane)
+      );
+      tt.position.set(
+        ((i % 2) - 0.5) * 0.06 * s,
+        0.65 * s - i * 0.08 * s,
+        -1.45 * s - i * 0.07 * s
+      );
+      tt.rotation.x = 1.0 + i * 0.05;
+      g.add(tt);
+    }
+
+    // Bridle (thin band around the snout)
+    const bridleSnout = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.13 * s, 0.13 * s, 0.04 * s, 8),
+      toonMat(0x3d2914)
+    );
+    bridleSnout.position.set(0, 1.62 * s, 1.5 * s);
+    bridleSnout.rotation.z = Math.PI / 2;
+    g.add(bridleSnout);
+    // Bridle straps (over head)
+    [-1, 1].forEach((side) => {
+      const strap = new THREE.Mesh(
+        new THREE.BoxGeometry(0.03 * s, 0.5 * s, 0.04 * s),
+        toonMat(0x3d2914)
+      );
+      strap.position.set(side * 0.16 * s, 1.78 * s, 1.3 * s);
+      strap.rotation.x = -0.3;
+      g.add(strap);
+    });
+    // Reins (two thin lines going from bridle back to saddle)
+    [-1, 1].forEach((side) => {
+      const rein = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.02 * s, 0.02 * s, 0.9 * s, 4),
+        toonMat(0x6f4a1a)
+      );
+      rein.position.set(side * 0.13 * s, 1.55 * s, 0.85 * s);
+      rein.rotation.x = -0.4;
+      g.add(rein);
+    });
 
     // Legs (4 cylinders) + hooves
     const legPositions = [
