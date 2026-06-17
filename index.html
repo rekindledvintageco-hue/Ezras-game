@@ -599,8 +599,8 @@ kbd {
  */
 
 const TILE = 32;
-const MAP_W = 95;
-const MAP_H = 55;
+const MAP_W = 130;
+const MAP_H = 80;
 const SPAWN_TILE = { tx: 14, ty: 22 };
 const HOME_W = 14;
 const HOME_H = 10;
@@ -863,6 +863,10 @@ const state = {
   outfitBag: [],          // outfit ids owned
   homeDecor: [],
   miniPetBag: [],
+  horses: [],             // tamed horses ({id, colorId, name})
+  ridingHorse: false,     // toggle when player presses O on a tamed horse
+  swimming: false,        // true when standing on a water tile (not flying)
+  swimTimer: 0,           // frames spent swimming — drown when this hits SWIM_LIMIT
   hero: { ...DEFAULT_HERO },
   weaponBag: [],
   equippedWeaponId: null,
@@ -965,6 +969,7 @@ function loadSave() {
     if (typeof data.wood === "number") state.wood = data.wood;
     if (data.outfit) state.outfit = data.outfit;
     if (data.outfitBag) state.outfitBag = data.outfitBag;
+    if (Array.isArray(data.horses)) state.horses = data.horses;
     if (data.homeDecor) state.homeDecor = data.homeDecor;
     if (data.hero) state.hero = { ...DEFAULT_HERO, ...data.hero };
     if (data.weaponBag) state.weaponBag = data.weaponBag;
@@ -1004,6 +1009,7 @@ function saveGame() {
       wood: state.wood,
       outfit: state.outfit,
       outfitBag: state.outfitBag,
+      horses: state.horses,
       homeDecor: state.homeDecor,
       miniPetBag: state.miniPetBag,
       hero: state.hero,
@@ -1161,6 +1167,51 @@ function generateMap() {
   setRect(map, 64, 45, 80, 51, 4, false);
   setRect(map, 80, 18, 90, 26, 4, false);
 
+  // ── BIGGER MAP: new regions to the east and south (TOTK-style) ──
+  // Eastern hills (large forest east of village)
+  setRect(map, 95, 10, 125, 35, 3, true);
+  for (let x = 95; x <= 125; x++) {
+    for (let y = 10; y <= 35; y++) {
+      if (map[y][x] === 3 && Math.random() < 0.35) map[y][x] = 0;
+    }
+  }
+  // Eastern lake
+  for (let y = 38; y <= 50; y++) {
+    for (let x = 100; x <= 115; x++) {
+      if ((x - 107) ** 2 + (y - 44) ** 2 < 30) map[y][x] = 2;
+    }
+  }
+  // South-east deep woods
+  setRect(map, 60, 55, 125, 75, 3, true);
+  for (let x = 60; x <= 125; x++) {
+    for (let y = 55; y <= 75; y++) {
+      if (map[y][x] === 3 && Math.random() < 0.32) map[y][x] = 0;
+    }
+  }
+  // Southern plains (open grass — horse meadow!)
+  setRect(map, 5, 55, 60, 75, 0, true);
+  setRect(map, 8, 60, 55, 73, 4, false); // tall grass within plains
+  // Far west forest
+  setRect(map, 4, 42, 18, 75, 3, true);
+  for (let x = 4; x <= 18; x++) {
+    for (let y = 42; y <= 75; y++) {
+      if (map[y][x] === 3 && Math.random() < 0.3) map[y][x] = 0;
+    }
+  }
+  // North-east plateau (mountain area suggested by sparse trees + rocks)
+  setRect(map, 100, 4, 125, 8, 3, true);
+  for (let x = 100; x <= 125; x++) {
+    for (let y = 4; y <= 8; y++) {
+      if (map[y][x] === 3 && Math.random() < 0.5) map[y][x] = 0;
+    }
+  }
+  // Northern expanded meadow (above the original northern forest)
+  for (let y = 14; y <= 16; y++) for (let x = 30; x <= 60; x++) {
+    if (map[y][x] === 3) map[y][x] = 0;
+  }
+  // Far-east shrine area (a new spot for exploration)
+  setRect(map, 118, 38, 124, 44, 8);
+
   // Keep paths clear over grass
   for (let x = 10; x < MAP_W - 10; x++) {
     if (map[22][x] === 4) map[22][x] = 1;
@@ -1272,7 +1323,17 @@ function resolvePlayerPosition() {
 
 const worldMap = generateMap();
 
-const MAX_WILD_DRAGONS = 65;
+const MAX_WILD_DRAGONS = 100;
+const MAX_WILD_HORSES = 18;
+
+const HORSE_COLORS = [
+  { id: "brown",     body: "#6f4a23", mane: "#3d2914", name: "Brown Horse" },
+  { id: "black",     body: "#1c1410", mane: "#0a0606", name: "Black Stallion" },
+  { id: "palomino",  body: "#deb887", mane: "#f4e3b1", name: "Palomino" },
+  { id: "gray",      body: "#9aa0a6", mane: "#5c6166", name: "Gray Horse" },
+  { id: "white",     body: "#f4f4f4", mane: "#d8d8d8", name: "White Steed" },
+  { id: "chestnut",  body: "#a0522d", mane: "#5a2614", name: "Chestnut" },
+];
 let wildOverworld = [];
 let wildDragonIdCounter = 0;
 let wildRespawnTimer = 0;
@@ -1375,6 +1436,110 @@ function tryRespawnWildDragon() {
 
 spawnWildDragonsOnMap();
 
+// ── Wild Horse System ────────────────────────────────────────
+let wildHorses = [];
+let wildHorseIdCounter = 0;
+
+function createWildHorse(tx, ty) {
+  const color = HORSE_COLORS[Math.floor(Math.random() * HORSE_COLORS.length)];
+  return {
+    id: ++wildHorseIdCounter,
+    colorId: color.id,
+    name: color.name,
+    x: tx * TILE + 6,
+    y: ty * TILE + 4,
+    w: 32,
+    h: 24,
+    moveTimer: 60 + Math.floor(Math.random() * 120),
+    bob: Math.random() * Math.PI * 2,
+    facing: Math.random() < 0.5 ? "right" : "left",
+  };
+}
+
+function spawnWildHorses() {
+  wildHorses = [];
+  wildHorseIdCounter = 0;
+  const candidates = [];
+  // Prefer open grass + tall grass tiles in the southern plains and other meadows
+  for (let y = 3; y < MAP_H - 3; y++) {
+    for (let x = 3; x < MAP_W - 3; x++) {
+      const t = worldMap[y][x];
+      if (t === 0 || t === 4) {
+        // Bias toward southern plains
+        const inPlains = (y >= 55 && y <= 75 && x >= 5 && x <= 60);
+        if (Math.random() < (inPlains ? 0.012 : 0.003)) candidates.push({ x, y });
+      }
+    }
+  }
+  for (let i = candidates.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+  }
+  const count = Math.min(MAX_WILD_HORSES, candidates.length);
+  for (let i = 0; i < count; i++) {
+    wildHorses.push(createWildHorse(candidates[i].x, candidates[i].y));
+  }
+}
+
+function updateWildHorses() {
+  if (state.mode !== "overworld") return;
+  wildHorses.forEach((h) => {
+    h.bob += 0.06;
+    h.moveTimer--;
+    if (h.moveTimer > 0) return;
+    h.moveTimer = 80 + Math.floor(Math.random() * 160);
+    const dirs = [[0,0],[1,0],[-1,0],[0,1],[0,-1]];
+    const [mx, my] = dirs[Math.floor(Math.random() * dirs.length)];
+    if (mx > 0) h.facing = "right"; else if (mx < 0) h.facing = "left";
+    const nx = h.x + mx * 10;
+    const ny = h.y + my * 10;
+    const tx = Math.floor((nx + h.w / 2) / TILE);
+    const ty = Math.floor((ny + h.h / 2) / TILE);
+    const t = worldMap[ty]?.[tx];
+    if (t === 0 || t === 4) { h.x = nx; h.y = ny; }
+  });
+}
+
+function nearestWildHorse(maxPx = 50) {
+  const pc = playerDragonCenter();
+  let best = null;
+  let bestDist = maxPx;
+  for (const h of wildHorses) {
+    const cx = h.x + h.w / 2;
+    const cy = h.y + h.h / 2;
+    const d = Math.hypot(pc.x - cx, pc.y - cy);
+    if (d < bestDist) { best = h; bestDist = d; }
+  }
+  return best;
+}
+
+function tameNearestHorse() {
+  if (state.mode !== "overworld") return;
+  const h = nearestWildHorse(60);
+  if (!h) { showToast("Walk right up to a horse, then press R to tame it!"); return; }
+  state.horses.push({ id: h.id, colorId: h.colorId, name: h.name });
+  wildHorses = wildHorses.filter((x) => x !== h);
+  showToast(`You tamed a ${h.name}! 🐴 Press O to ride it.`, 3500);
+  saveGame();
+}
+
+function toggleHorseMount() {
+  if (state.horses.length === 0) {
+    showToast("Find a wild horse and press R to tame one first!");
+    return;
+  }
+  if (state.flying) { showToast("Land first before mounting a horse!"); return; }
+  state.ridingHorse = !state.ridingHorse;
+  if (state.ridingHorse) {
+    state.mounted = false; // can't ride dragon and horse at once
+    showToast(`Riding ${state.horses[0].name}! 🐴 Press O to dismount.`);
+  } else {
+    showToast("Dismounted from horse.");
+  }
+}
+
+spawnWildHorses();
+
 function tileAt(px, py) {
   const tx = Math.floor(px / TILE);
   const ty = Math.floor(py / TILE);
@@ -1383,8 +1548,8 @@ function tileAt(px, py) {
 }
 
 function isBlocked(tile, flying) {
-  if (flying) return tile === 2;
-  return tile === 2 || tile === 3;
+  if (flying) return false;             // flying — water and trees pass-through
+  return tile === 3;                    // trees block walking; water now lets you SWIM
 }
 
 function showToast(msg, ms = 2500) {
@@ -2228,6 +2393,35 @@ function nearHouse() {
   return false;
 }
 
+function drownAndRespawn() {
+  // Try to respawn at the first built cabin; fall back to player home.
+  let respawnTx = SPAWN_TILE.tx;
+  let respawnTy = SPAWN_TILE.ty;
+  if (state.cabins.length > 0) {
+    const c = state.cabins[0];
+    respawnTx = c.tx + 1;
+    respawnTy = c.ty + 3;
+  } else {
+    // Player home is at tile (7-8, 21-22); spawn just east of it on path
+    respawnTx = 11;
+    respawnTy = 23;
+  }
+  const pos = tileToSpawnPixels(respawnTx, respawnTy);
+  state.player.x = pos.x;
+  state.player.y = pos.y;
+  state.swimming = false;
+  state.swimTimer = 0;
+  state.flying = false;
+  state.mounted = false;
+  state.ridingHorse = false;
+  state.encounterCooldown = 60;
+  resolvePlayerPosition();
+  // Each surviving dragon loses 30% HP for the panic.
+  state.party.forEach((d) => { d.hp = Math.max(1, Math.floor(d.hp * 0.7)); });
+  showToast("💧 You drowned! Respawned at your cabin 🏡", 4000);
+  saveGame();
+}
+
 function inVillageZone() {
   const tx = Math.floor(state.player.x / TILE);
   const ty = Math.floor(state.player.y / TILE);
@@ -2609,12 +2803,18 @@ function handleInput() {
 
   let speed = state.player.speed;
   if (state.mounted) speed *= 1.6;
+  if (state.ridingHorse) speed *= 1.8;
   if (state.flying) speed *= 2.2;
 
   const nx = state.player.x + dx * speed;
   const ny = state.player.y + dy * speed;
 
   if (state.mode === "overworld" || state.mode === "village") {
+    // Slow down in water (swimming) unless flying
+    const centerTile = tileAt(state.player.x + state.player.w / 2, state.player.y + state.player.h / 2);
+    const inWater = centerTile === 2 && !state.flying;
+    if (inWater) speed *= 0.55;
+
     const t1 = tileAt(nx, state.player.y);
     const t2 = tileAt(state.player.x, ny);
     if (!isBlocked(t1, state.flying)) state.player.x = nx;
@@ -2624,6 +2824,26 @@ function handleInput() {
     if (state.mode === "village" && (dx || dy) && !inVillageZone()) {
       state.mode = "overworld";
       showToast("Left the village zone. Walk up to dragons to battle them!");
+    }
+
+    // ── SWIMMING / DROWNING ──
+    if (inWater) {
+      if (!state.swimming) {
+        state.swimming = true;
+        showToast("🌊 Swimming! Get out within 10 seconds or you'll drown!", 3000);
+      }
+      state.swimTimer++;
+      if (state.swimTimer > 600) {
+        drownAndRespawn();
+      } else if (state.swimTimer === 360) {
+        showToast("⚠️ You're getting tired! Find dry land!", 2500);
+      } else if (state.swimTimer === 540) {
+        showToast("💧 About to drown!!", 1500);
+      }
+    } else {
+      if (state.swimming) showToast("Phew, dry land!", 1200);
+      state.swimming = false;
+      state.swimTimer = 0;
     }
   } else if (state.mode === "home") {
     const maxX = HOME_W * TILE - state.player.w;
@@ -2703,9 +2923,17 @@ function handleInput() {
   if (keysJust.has("m") && state.mode === "overworld") {
     const pet = activeDragon();
     if (pet.canRide) {
+      state.ridingHorse = false; // dragon mount cancels horse
       state.mounted = !state.mounted;
       showToast(state.mounted ? `Riding ${pet.name}!` : "Dismounted.");
     }
+  }
+
+  if (keysJust.has("r") && state.mode === "overworld") {
+    tameNearestHorse();
+  }
+  if (keysJust.has("o") && state.mode === "overworld") {
+    toggleHorseMount();
   }
 
   if (keysJust.has("p") && state.mode === "overworld") {
@@ -2761,6 +2989,7 @@ function tickLogic() {
   if (state.mode !== "battle") handleInput();
   if (state.mode === "overworld") {
     updateWildDragons();
+    updateWildHorses();
     checkWildDragonTouch();
   }
   if (state.encounterCooldown > 0) state.encounterCooldown--;
@@ -2807,9 +3036,9 @@ function startGameSession() {
 els.startBtn.addEventListener("click", startGameSession);
 
 window.GameCore = {
-  get wildOverworld() {
-    return wildOverworld;
-  },
+  get wildOverworld() { return wildOverworld; },
+  get wildHorses() { return wildHorses; },
+  HORSE_COLORS,
   state,
   els,
   keys,
@@ -2895,9 +3124,10 @@ resolvePlayerPosition();
 
   let scene, camera, renderer, clock;
   let toonGradient;
-  let worldGroup, playerGroup, wildGroup, battleGroup, homeGroup, cabinGroup, cabinInteriorGroup;
-  let playerMesh, mountDragonMesh, mountPetMesh;
+  let worldGroup, playerGroup, wildGroup, battleGroup, homeGroup, cabinGroup, cabinInteriorGroup, horseGroup;
+  let playerMesh, mountDragonMesh, mountPetMesh, mountHorseMesh;
   let wildMeshes = new Map();
+  let horseMeshes = new Map();
   let treeMeshes = new Map();
   let battleMeshes = { player: null, wild: null };
   let cameraYaw = 0;
@@ -2960,23 +3190,86 @@ resolvePlayerPosition();
         worldGroup.add(ground);
 
         if (t === 3) {
+          // TOTK-style: three randomized tree variants — pine, oak, birch
           const tree = new THREE.Group();
-          const trunk = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.2, 0.28, 0.9, 6),
-            toonMat(0x5d4037)
-          );
-          trunk.position.y = 0.55;
-          tree.add(trunk);
-          const leaves = new THREE.Mesh(
-            new THREE.SphereGeometry(0.75, 8, 8),
-            toonMat(0x2d6a4f, 0x0a2e14)
-          );
-          leaves.position.y = 1.25;
-          leaves.scale.set(1, 1.15, 1);
-          tree.add(leaves);
+          const variant = (tx * 7 + ty * 13) % 3; // deterministic per-tile
+          if (variant === 0) {
+            // Pine — tall, conical, dark green stacked cones
+            const trunk = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.16, 0.22, 1.1, 6),
+              toonMat(0x4a3119)
+            );
+            trunk.position.y = 0.55;
+            tree.add(trunk);
+            for (let k = 0; k < 3; k++) {
+              const cone = new THREE.Mesh(
+                new THREE.ConeGeometry(0.85 - k * 0.15, 0.7, 7),
+                toonMat(0x215a3b, 0x0a2616)
+              );
+              cone.position.y = 1.1 + k * 0.55;
+              tree.add(cone);
+            }
+          } else if (variant === 1) {
+            // Oak — broad, rounded, bright green
+            const trunk = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.22, 0.3, 0.85, 6),
+              toonMat(0x5d4037)
+            );
+            trunk.position.y = 0.5;
+            tree.add(trunk);
+            const leaves = new THREE.Mesh(
+              new THREE.SphereGeometry(0.85, 9, 8),
+              toonMat(0x4f8f3d, 0x1c3a17)
+            );
+            leaves.position.y = 1.35;
+            leaves.scale.set(1.2, 0.9, 1.2);
+            tree.add(leaves);
+          } else {
+            // Birch — slim white trunk, light green canopy
+            const trunk = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.13, 0.18, 1.2, 6),
+              toonMat(0xe8e8e0)
+            );
+            trunk.position.y = 0.65;
+            tree.add(trunk);
+            const leaves = new THREE.Mesh(
+              new THREE.SphereGeometry(0.65, 8, 8),
+              toonMat(0x8bb87a, 0x2c4a26)
+            );
+            leaves.position.y = 1.55;
+            leaves.scale.set(1, 1.2, 1);
+            tree.add(leaves);
+          }
           tree.position.set(wx + UNIT / 2, 0, wz + UNIT / 2);
           worldGroup.add(tree);
           treeMeshes.set(`${tx},${ty}`, tree);
+        }
+
+        // TOTK-style scattered decorations on grass tiles
+        if (t === 0) {
+          const seed = (tx * 911 + ty * 271) % 1000;
+          // Rock (small grey clump)
+          if (seed < 18) {
+            const rock = new THREE.Mesh(
+              new THREE.SphereGeometry(0.28, 6, 5),
+              toonMat(0x6e7681)
+            );
+            rock.position.set(wx + UNIT / 2 + ((seed % 7) - 3) * 0.18, 0.2, wz + UNIT / 2 + (((seed / 7) | 0) % 5 - 2) * 0.18);
+            rock.scale.set(1.2, 0.65, 1.0);
+            worldGroup.add(rock);
+          } else if (seed < 70) {
+            // Flower clusters (small colorful cones)
+            const flowerColors = [0xffd166, 0xef476f, 0xe0aaff, 0xf72585, 0xffffff, 0xff8c2a];
+            const fc = flowerColors[seed % flowerColors.length];
+            for (let k = 0; k < 3; k++) {
+              const f = new THREE.Mesh(
+                new THREE.ConeGeometry(0.08, 0.18, 4),
+                toonMat(fc, fc & 0x333333)
+              );
+              f.position.set(wx + UNIT * 0.3 + k * 0.25, 0.27, wz + UNIT * 0.35 + (k % 2) * 0.2);
+              worldGroup.add(f);
+            }
+          }
         }
 
         if (t === 4) {
@@ -3563,6 +3856,172 @@ resolvePlayerPosition();
     return g;
   }
 
+  function buildHorseMesh(colorId, scale = 1) {
+    const palette = GC().HORSE_COLORS.find(c => c.id === colorId) || GC().HORSE_COLORS[0];
+    const body = hex(palette.body);
+    const mane = hex(palette.mane);
+    const hoof = 0x222222;
+    const g = new THREE.Group();
+    const s = scale;
+
+    // Body (horizontal cylinder)
+    const torso = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.4 * s, 0.4 * s, 1.4 * s, 10),
+      toonMat(body)
+    );
+    torso.rotation.z = Math.PI / 2;
+    torso.position.y = 0.9 * s;
+    g.add(torso);
+
+    // Chest cap (front sphere)
+    const chest = new THREE.Mesh(new THREE.SphereGeometry(0.4 * s, 10, 8), toonMat(body));
+    chest.position.set(0, 0.9 * s, 0.7 * s);
+    g.add(chest);
+
+    // Rear cap (back sphere)
+    const rear = new THREE.Mesh(new THREE.SphereGeometry(0.4 * s, 10, 8), toonMat(body));
+    rear.position.set(0, 0.9 * s, -0.7 * s);
+    g.add(rear);
+
+    // Neck (cylinder angled up + forward)
+    const neck = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.18 * s, 0.25 * s, 0.85 * s, 8),
+      toonMat(body)
+    );
+    neck.position.set(0, 1.35 * s, 0.85 * s);
+    neck.rotation.x = -0.5;
+    g.add(neck);
+
+    // Head
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.32 * s, 0.32 * s, 0.55 * s),
+      toonMat(body)
+    );
+    head.position.set(0, 1.75 * s, 1.25 * s);
+    head.rotation.x = -0.25;
+    g.add(head);
+
+    // Snout (lighter shade)
+    const snout = new THREE.Mesh(
+      new THREE.BoxGeometry(0.22 * s, 0.18 * s, 0.18 * s),
+      toonMat(lightenHex(body, 0.15))
+    );
+    snout.position.set(0, 1.62 * s, 1.5 * s);
+    g.add(snout);
+
+    // Ears (two small triangles)
+    [-1, 1].forEach((side) => {
+      const ear = new THREE.Mesh(
+        new THREE.ConeGeometry(0.07 * s, 0.18 * s, 4),
+        toonMat(body)
+      );
+      ear.position.set(side * 0.1 * s, 1.95 * s, 1.05 * s);
+      g.add(ear);
+    });
+
+    // Eyes
+    [-1, 1].forEach((side) => {
+      const eye = new THREE.Mesh(
+        new THREE.SphereGeometry(0.04 * s, 6, 6),
+        toonMat(0x111111)
+      );
+      eye.position.set(side * 0.12 * s, 1.78 * s, 1.4 * s);
+      g.add(eye);
+    });
+
+    // Mane (cones running along the neck)
+    for (let i = 0; i < 5; i++) {
+      const tuft = new THREE.Mesh(
+        new THREE.ConeGeometry(0.13 * s, 0.28 * s, 5),
+        toonMat(mane)
+      );
+      tuft.position.set(0, 1.55 * s + i * 0.05 * s, 1.05 * s - i * 0.18 * s);
+      tuft.rotation.x = 0.2;
+      g.add(tuft);
+    }
+
+    // Forelock (between ears)
+    const forelock = new THREE.Mesh(
+      new THREE.ConeGeometry(0.1 * s, 0.18 * s, 5),
+      toonMat(mane)
+    );
+    forelock.position.set(0, 1.95 * s, 1.18 * s);
+    forelock.rotation.x = 0.3;
+    g.add(forelock);
+
+    // Tail (cylinder + tuft)
+    const tail = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.08 * s, 0.18 * s, 0.7 * s, 6),
+      toonMat(mane)
+    );
+    tail.position.set(0, 1.0 * s, -1.1 * s);
+    tail.rotation.x = 0.6;
+    g.add(tail);
+
+    // Legs (4 cylinders) + hooves
+    const legPositions = [
+      [-0.22, 0.5],
+      [ 0.22, 0.5],
+      [-0.22, -0.5],
+      [ 0.22, -0.5],
+    ];
+    legPositions.forEach(([lx, lz]) => {
+      const leg = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.1 * s, 0.13 * s, 0.85 * s, 6),
+        toonMat(body)
+      );
+      leg.position.set(lx * s, 0.42 * s, lz * s);
+      g.add(leg);
+      const hoofMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.14 * s, 0.14 * s, 0.1 * s, 6),
+        toonMat(hoof)
+      );
+      hoofMesh.position.set(lx * s, 0.05 * s, lz * s);
+      g.add(hoofMesh);
+    });
+
+    // Saddle on the back
+    const saddle = new THREE.Mesh(
+      new THREE.BoxGeometry(0.6 * s, 0.18 * s, 0.7 * s),
+      toonMat(0x5d3b1a)
+    );
+    saddle.position.set(0, 1.25 * s, 0.1 * s);
+    g.add(saddle);
+    // Saddle horn
+    const horn = new THREE.Mesh(
+      new THREE.BoxGeometry(0.18 * s, 0.18 * s, 0.18 * s),
+      toonMat(0x3d2914)
+    );
+    horn.position.set(0, 1.4 * s, 0.45 * s);
+    g.add(horn);
+
+    return g;
+  }
+
+  function syncWildHorses() {
+    const ids = new Set(GC().wildHorses.map((h) => h.id));
+    for (const [id, entry] of horseMeshes) {
+      if (!ids.has(id)) {
+        horseGroup.remove(entry.mesh);
+        horseMeshes.delete(id);
+      }
+    }
+    GC().wildHorses.forEach((h) => {
+      let entry = horseMeshes.get(h.id);
+      if (!entry) {
+        const mesh = buildHorseMesh(h.colorId, 0.9);
+        horseGroup.add(mesh);
+        entry = { mesh };
+        horseMeshes.set(h.id, entry);
+      }
+      const wx = pxToWorld(h.x + h.w / 2);
+      const wz = pxToWorld(h.y + h.h / 2);
+      const bob = Math.sin(h.bob) * 0.08;
+      entry.mesh.position.set(wx, bob, wz);
+      entry.mesh.rotation.y = h.facing === "right" ? -Math.PI / 2 : Math.PI / 2;
+    });
+  }
+
   function buildHeroMesh() {
     const hero = GC().state.hero;
     const g = new THREE.Group();
@@ -3813,9 +4272,21 @@ resolvePlayerPosition();
   function updateMountDragon() {
     if (mountDragonMesh) { playerGroup.remove(mountDragonMesh); mountDragonMesh = null; }
     if (mountPetMesh)    { playerGroup.remove(mountPetMesh);    mountPetMesh = null; }
+    if (mountHorseMesh)  { playerGroup.remove(mountHorseMesh);  mountHorseMesh = null; }
     const st = GC().state;
+
+    // Horse riding
+    if (st.ridingHorse && st.horses.length > 0) {
+      const horse = st.horses[0];
+      mountHorseMesh = buildHorseMesh(horse.colorId, 1.0);
+      mountHorseMesh.position.y = 0;
+      playerGroup.add(mountHorseMesh);
+      if (playerMesh) playerMesh.position.y = 1.55;
+      return;
+    }
+
     if (!st.mounted && !st.flying) {
-      if (playerMesh) playerMesh.position.y = 0;
+      if (playerMesh) playerMesh.position.y = (st.swimming ? -0.55 : 0);
       return;
     }
     const pet = st.party[st.activePet];
@@ -4184,6 +4655,7 @@ resolvePlayerPosition();
     battleGroup.visible = mode === "battle";
     cabinGroup.visible = outdoor;
     cabinInteriorGroup.visible = mode === "cabin";
+    horseGroup.visible = outdoor;
 
     if (mode === "home" || mode === "village" || mode === "cabin") {
       syncPlayerPosition();
@@ -4195,10 +4667,11 @@ resolvePlayerPosition();
     if (!container) return;
 
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87ceeb);
-    scene.fog = new THREE.Fog(0x87ceeb, 40, 120);
+    // TOTK-style warmer sky + extended fog for sense of scale
+    scene.background = new THREE.Color(0xa3d8f5);
+    scene.fog = new THREE.Fog(0xc8e4f5, 55, 180);
 
-    camera = new THREE.PerspectiveCamera(50, 16 / 9, 0.1, 250);
+    camera = new THREE.PerspectiveCamera(50, 16 / 9, 0.1, 350);
     clock = new THREE.Clock();
     toonGradient = createGradientTexture();
 
@@ -4210,12 +4683,16 @@ resolvePlayerPosition();
     renderer.domElement.id = "game";
     renderer.domElement.tabIndex = 0;
 
-    const hemi = new THREE.HemisphereLight(0xfff5e6, 0x4a7c59, 1.1);
+    // Brighter, warmer TOTK-style lighting
+    const hemi = new THREE.HemisphereLight(0xfff2cc, 0x6b9b54, 1.4);
     scene.add(hemi);
-    const sun = new THREE.DirectionalLight(0xffffff, 1.4);
-    sun.position.set(30, 50, 20);
+    const sun = new THREE.DirectionalLight(0xfff4d8, 1.55);
+    sun.position.set(30, 60, 25);
     sun.castShadow = true;
     scene.add(sun);
+    // Soft ambient for shadow lift
+    const ambient = new THREE.AmbientLight(0xa0c0e0, 0.25);
+    scene.add(ambient);
 
     worldGroup = new THREE.Group();
     wildGroup = new THREE.Group();
@@ -4224,6 +4701,7 @@ resolvePlayerPosition();
     homeGroup = new THREE.Group();
     cabinGroup = new THREE.Group();
     cabinInteriorGroup = new THREE.Group();
+    horseGroup = new THREE.Group();
     battleGroup.visible = false;
     homeGroup.visible = false;
     cabinInteriorGroup.visible = false;
@@ -4235,6 +4713,7 @@ resolvePlayerPosition();
     scene.add(homeGroup);
     scene.add(cabinGroup);
     scene.add(cabinInteriorGroup);
+    scene.add(horseGroup);
 
     buildWorld();
     buildBattleArena();
@@ -4250,6 +4729,7 @@ resolvePlayerPosition();
     GCref.onGameStart = () => {
       syncPlayerPosition();
       syncWildDragons();
+      syncWildHorses();
       GCref.bindCanvasClickHandler();
       renderer.domElement.focus();
     };
@@ -4293,6 +4773,7 @@ resolvePlayerPosition();
       GC().tickLogic();
       syncPlayerPosition();
       syncWildDragons();
+      syncWildHorses();
       updateSceneMode();
       if (GC().state.mode === "village" || GC().state.mode === "overworld") {
         cabinGroup.visible = true;
